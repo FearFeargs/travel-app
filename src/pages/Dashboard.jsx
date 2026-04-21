@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
+import NewTripModal from '@/components/NewTripModal'
 
 export default function Dashboard() {
   const user = useAuth()
   const navigate = useNavigate()
   const [displayName, setDisplayName] = useState('')
+  const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -33,14 +35,16 @@ export default function Dashboard() {
           <h1 className="text-2xl font-semibold">
             Welcome, {displayName || '…'}
           </h1>
-          <Button variant="outline" onClick={handleLogout}>
-            Log out
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setModalOpen(true)}>New trip</Button>
+            <Button variant="outline" onClick={handleLogout}>Log out</Button>
+          </div>
         </div>
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           Your trips will appear here
         </div>
       </div>
+      <NewTripModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import Login from '@/pages/Login'
 import SignUp from '@/pages/SignUp'
 import Dashboard from '@/pages/Dashboard'
+import TripDetail from '@/pages/TripDetail'
 
 export default function App() {
   return (
@@ -14,6 +15,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trips/:id"
+        element={
+          <ProtectedRoute>
+            <TripDetail />
           </ProtectedRoute>
         }
       />
