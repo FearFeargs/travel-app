@@ -32,3 +32,30 @@ Use Vite + React, Tailwind CSS, shadcn/ui, Supabase, and Mapbox.
 - JavaScript (not TypeScript) keeps the learning curve lower now; adding TypeScript later is straightforward.
 
 ---
+
+## 002 — Auth, Database Foundation, and First UI
+
+**Date:** 2026-04-21
+**Status:** Decided
+
+### What we built
+
+**Database tables:** `users` and `trips` in Supabase, with Row Level Security (RLS) policies enforcing that users can only read/edit their own profile, and only trip owners can read, edit, or delete their trips. The `trips` table has an `updated_at` trigger that automatically timestamps changes.
+
+**Auth flow:** Email/password sign-up and login using Supabase Auth. Three pages — `/signup`, `/login`, `/dashboard` — with React Router handling navigation. A `ProtectedRoute` component redirects unauthenticated users away from `/dashboard`. Logged-in users are redirected away from `/login` and `/signup`.
+
+**Profile creation via database trigger:** When a new user signs up, a Postgres trigger (`on_auth_user_created`) automatically creates their row in the `users` table. The display name is passed as metadata in the `signUp()` call and read by the trigger.
+
+### Why a trigger instead of inserting from the app
+
+Our first attempt inserted the profile row directly from `SignUp.jsx` after `auth.signUp()` returned. This failed because Supabase had email confirmation enabled — the user wasn't fully authenticated yet, so `auth.uid()` was null and RLS blocked the insert. Moving the insert to a database trigger (marked `security definer`) means it runs with elevated privileges the moment the auth user is created, regardless of confirmation status.
+
+### Trade-offs and things deferred
+
+- **Email confirmation is disabled** in the Supabase dashboard for development convenience. Before launch, it should be re-enabled and the sign-up flow updated to show a "check your email" message instead of immediately redirecting.
+- **The trips read policy is owner-only for now.** It needs to be updated to also allow trip members to read trips once the `trip_members` table is created.
+- **No form validation beyond browser defaults.** Password strength requirements, duplicate email messaging, and field-level errors are all deferred.
+- **Dashboard is a placeholder.** It shows the user's name and an empty state message. Actual trip listing comes next.
+- **No password reset flow.** Supabase supports this out of the box; we just haven't wired it up yet.
+
+---
