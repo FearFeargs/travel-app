@@ -97,20 +97,22 @@ export default function NewTripModal({ open, onClose }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="start-date">Start date</Label>
-              <Input
+              <input
                 id="start-date"
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
+                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               />
             </div>
             <div className="space-y-1">
               <Label htmlFor="end-date">End date</Label>
-              <Input
+              <input
                 id="end-date"
                 type="date"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
+                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               />
             </div>
           </div>
