@@ -23,22 +23,14 @@ export default function SignUp() {
     setError(null)
     setLoading(true)
 
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { display_name: displayName } },
+    })
 
     if (signUpError) {
       setError(signUpError.message)
-      setLoading(false)
-      return
-    }
-
-    const { error: profileError } = await supabase.from('users').insert({
-      id: data.user.id,
-      email,
-      display_name: displayName,
-    })
-
-    if (profileError) {
-      setError(profileError.message)
       setLoading(false)
       return
     }
