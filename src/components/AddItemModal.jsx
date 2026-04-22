@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -28,6 +28,12 @@ function blurSlate(e)  { e.target.style.borderColor = '#C4CDD8' }
 
 const HOURS   = ['1','2','3','4','5','6','7','8','9','10','11','12']
 const MINUTES = ['00','05','10','15','20','25','30','35','40','45','50','55']
+
+function timeToHHMM(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
 
 function TimeSelect({ value, onChange }) {
   let h = '', m = '00', ap = 'AM'
@@ -68,7 +74,9 @@ function TimeSelect({ value, onChange }) {
   )
 }
 
-export default function AddItemModal({ open, onClose, day, tripId, userId, onAdded }) {
+export default function AddItemModal({ open, onClose, day, tripId, userId, onAdded, item }) {
+  const isEdit = Boolean(item)
+
   const [title, setTitle]         = useState('')
   const [itemType, setItemType]   = useState('activity')
   const [startTime, setStartTime] = useState('')
@@ -80,11 +88,30 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
   const [url, setUrl]             = useState('')
   const [error, setError]         = useState(null)
   const [loading, setLoading]     = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  useEffect(() => {
+    if (item) {
+      setTitle(item.title || '')
+      setItemType(item.item_type || 'activity')
+      setStartTime(timeToHHMM(item.start_time))
+      setEndTime(timeToHHMM(item.end_time))
+      setLocation(item.location_name || '')
+      setNotes(item.notes || '')
+      setCost(item.cost_amount != null ? String(item.cost_amount) : '')
+      setCurrency(item.cost_currency || 'USD')
+      setUrl(item.url || '')
+      setError(null)
+      setConfirmDelete(false)
+    } else {
+      reset()
+    }
+  }, [item, open])
 
   function reset() {
     setTitle(''); setItemType('activity'); setStartTime(''); setEndTime('')
     setLocation(''); setNotes(''); setCost(''); setCurrency('USD')
-    setUrl(''); setError(null)
+    setUrl(''); setError(null); setConfirmDelete(false); setLoading(false)
   }
 
   function handleClose() {
@@ -103,37 +130,38 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
     setError(null)
     setLoading(true)
 
-    const { data: existingItems } = await supabase
-      .from('items')
-      .select('order_index')
-      .eq('day_id', day.id)
-      .order('order_index', { ascending: false })
-      .limit(1)
+    const fields = {
+      title:         title.trim(),
+      item_type:     itemType,
+      start_time:    combineDateTime(startTime),
+      end_time:      combineDateTime(endTime),
+      location_name: location.trim() || null,
+      notes:         notes.trim() || null,
+      cost_amount:   cost ? parseFloat(cost) : null,
+      cost_currency: currency,
+      url:           url.trim() || null,
+    }
 
-    const nextIndex = existingItems?.[0]?.order_index != null
-      ? existingItems[0].order_index + 1
-      : 0
+    if (isEdit) {
+      const { error: updateError } = await supabase
+        .from('items').update(fields).eq('id', item.id)
+      if (updateError) { setError(updateError.message); setLoading(false); return }
+    } else {
+      const { data: existingItems } = await supabase
+        .from('items').select('order_index')
+        .eq('day_id', day.id).order('order_index', { ascending: false }).limit(1)
 
-    const { error: insertError } = await supabase.from('items').insert({
-      trip_id:            tripId,
-      day_id:             day.id,
-      title:              title.trim(),
-      item_type:          itemType,
-      start_time:         combineDateTime(startTime),
-      end_time:           combineDateTime(endTime),
-      location_name:      location.trim() || null,
-      notes:              notes.trim() || null,
-      cost_amount:        cost ? parseFloat(cost) : null,
-      cost_currency:      currency,
-      url:                url.trim() || null,
-      order_index:        nextIndex,
-      created_by_user_id: userId,
-    })
+      const nextIndex = existingItems?.[0]?.order_index != null
+        ? existingItems[0].order_index + 1 : 0
 
-    if (insertError) {
-      setError(insertError.message)
-      setLoading(false)
-      return
+      const { error: insertError } = await supabase.from('items').insert({
+        ...fields,
+        trip_id:            tripId,
+        day_id:             day.id,
+        order_index:        nextIndex,
+        created_by_user_id: userId,
+      })
+      if (insertError) { setError(insertError.message); setLoading(false); return }
     }
 
     reset()
@@ -141,12 +169,22 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
     onClose()
   }
 
+  async function handleDelete() {
+    setLoading(true)
+    const { error: deleteError } = await supabase
+      .from('items').delete().eq('id', item.id)
+    if (deleteError) { setError(deleteError.message); setLoading(false); return }
+    reset()
+    onAdded()
+    onClose()
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent style={{ borderRadius: 20, padding: '32px', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+      <DialogContent style={{ borderRadius: 20, padding: '32px', maxWidth: 520, maxHeight: 'calc(90vh - 62px)', overflowY: 'auto', top: 'calc(50% + 31px)' }}>
         <DialogHeader>
           <DialogTitle style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 400, color: '#0B0F1A' }}>
-            Add to {day ? `Day ${day.day_number}` : 'itinerary'}
+            {isEdit ? 'Edit item' : `Add to ${day ? `Day ${day.day_number}` : 'itinerary'}`}
           </DialogTitle>
           {day && (
             <p style={{ fontSize: 13, color: '#8C97A6', marginTop: 2 }}>
@@ -257,11 +295,36 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4 }}>
-            <button type="button" className="btn-away-secondary" onClick={handleClose} disabled={loading}>Cancel</button>
-            <button type="submit" className="btn-away-primary" disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
-              {loading ? 'Adding…' : 'Add to itinerary'}
-            </button>
+          {/* Delete confirmation strip */}
+          {isEdit && confirmDelete && (
+            <div style={{ background: '#FCECEA', border: '1px solid #F5B8B4', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <span style={{ fontSize: 13, color: '#C23B2E', fontWeight: 500 }}>Delete this item?</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn-away-secondary" style={{ padding: '6px 14px', fontSize: 13 }}
+                  onClick={() => setConfirmDelete(false)} disabled={loading}>Cancel</button>
+                <button type="button" disabled={loading}
+                  onClick={handleDelete}
+                  style={{ padding: '6px 14px', fontSize: 13, fontWeight: 600, background: '#C23B2E', color: '#fff', border: 'none', borderRadius: 9999, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: loading ? 0.7 : 1 }}>
+                  {loading ? 'Deleting…' : 'Yes, delete'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
+            {isEdit ? (
+              <button type="button" disabled={loading || confirmDelete}
+                onClick={() => setConfirmDelete(true)}
+                style={{ fontSize: 13, color: '#C23B2E', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, padding: 0, opacity: confirmDelete ? 0.4 : 1 }}>
+                Delete item
+              </button>
+            ) : <span />}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" className="btn-away-secondary" onClick={handleClose} disabled={loading}>Cancel</button>
+              <button type="submit" className="btn-away-primary" disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
+                {loading ? (isEdit ? 'Saving…' : 'Adding…') : (isEdit ? 'Save changes' : 'Add to itinerary')}
+              </button>
+            </div>
           </div>
         </form>
       </DialogContent>

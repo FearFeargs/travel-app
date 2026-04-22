@@ -39,7 +39,7 @@ const TYPE_CONFIG = {
 
 // ── Item card ───────────────────────────────────────────────────
 
-function ItemCard({ item }) {
+function ItemCard({ item, onClick }) {
   const [hover, setHover] = useState(false)
   const cfg = TYPE_CONFIG[item.item_type] || TYPE_CONFIG.other
 
@@ -52,6 +52,7 @@ function ItemCard({ item }) {
 
   return (
     <div
+      onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -117,6 +118,7 @@ export default function TripDetail() {
   const [activeDay, setActiveDay]     = useState(0)
   const [loading, setLoading]         = useState(true)
   const [modalOpen, setModalOpen]     = useState(false)
+  const [editingItem, setEditingItem] = useState(null)
 
   const loadItems = useCallback(async () => {
     if (!id) return
@@ -246,7 +248,7 @@ export default function TripDetail() {
                     <div style={{ color: '#A0ADBC', fontSize: 14, padding: '8px 0' }}>Nothing planned yet.</div>
                   )}
                   {dayItems.map(item => (
-                    <ItemCard key={item.id} item={item} />
+                    <ItemCard key={item.id} item={item} onClick={() => setEditingItem(item)} />
                   ))}
 
                   {/* Add item button */}
@@ -328,15 +330,16 @@ export default function TripDetail() {
         </div>
       </div>
 
-      {/* Add item modal */}
+      {/* Add / edit item modal */}
       {activeDay_obj && (
         <AddItemModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          open={modalOpen || editingItem !== null}
+          onClose={() => { setModalOpen(false); setEditingItem(null) }}
           day={activeDay_obj}
           tripId={id}
           userId={user?.id}
           onAdded={loadItems}
+          item={editingItem}
         />
       )}
     </div>
