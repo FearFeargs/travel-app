@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+
+const inputStyle = {
+  width: '100%', padding: '10px 14px', borderRadius: 10,
+  border: '1.5px solid #C4CDD8', fontSize: 14, color: '#0B0F1A',
+  background: '#fff', outline: 'none', fontFamily: 'DM Sans, sans-serif',
+  transition: 'border-color 150ms',
+}
+
+const labelStyle = {
+  display: 'block', fontSize: 12, fontWeight: 600, color: '#677585',
+  letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6,
+}
 
 export default function NewTripModal({ open, onClose }) {
   const navigate = useNavigate()
@@ -34,10 +37,7 @@ export default function NewTripModal({ open, onClose }) {
   async function handleSubmit(e) {
     e.preventDefault()
     const validationError = validate()
-    if (validationError) {
-      setError(validationError)
-      return
-    }
+    if (validationError) { setError(validationError); return }
     setError(null)
     setLoading(true)
 
@@ -49,94 +49,92 @@ export default function NewTripModal({ open, onClose }) {
       p_description: description.trim() || null,
     })
 
-    if (rpcError) {
-      setError(rpcError.message)
-      setLoading(false)
-      return
-    }
-
+    if (rpcError) { setError(rpcError.message); setLoading(false); return }
     navigate(`/trips/${data}`)
   }
 
   function handleClose() {
     if (loading) return
-    setTitle('')
-    setDestination('')
-    setStartDate('')
-    setEndDate('')
-    setDescription('')
-    setError(null)
-    onClose()
+    setTitle(''); setDestination(''); setStartDate(''); setEndDate('')
+    setDescription(''); setError(null); onClose()
   }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent style={{ borderRadius: 20, padding: '32px', maxWidth: 480 }}>
         <DialogHeader>
-          <DialogTitle>New trip</DialogTitle>
+          <DialogTitle style={{ fontFamily: 'Georgia, serif', fontSize: 24, fontWeight: 400, color: '#0B0F1A' }}>
+            Plan a new trip
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          <div className="space-y-1">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              placeholder="Baja Spring Break 2027"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
+
+        <form onSubmit={handleSubmit} style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={labelStyle}>Trip title</label>
+            <input
+              style={inputStyle} placeholder="Baja Spring Break 2027"
+              value={title} onChange={e => setTitle(e.target.value)}
+              onFocus={e => e.target.style.borderColor = '#D95F2B'}
+              onBlur={e => e.target.style.borderColor = '#C4CDD8'}
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="destination">Destination</Label>
-            <Input
-              id="destination"
-              placeholder="Baja California, Mexico"
-              value={destination}
-              onChange={e => setDestination(e.target.value)}
+
+          <div>
+            <label style={labelStyle}>Destination</label>
+            <input
+              style={inputStyle} placeholder="Baja California, Mexico"
+              value={destination} onChange={e => setDestination(e.target.value)}
+              onFocus={e => e.target.style.borderColor = '#D95F2B'}
+              onBlur={e => e.target.style.borderColor = '#C4CDD8'}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="start-date">Start date</Label>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Start date</label>
               <input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = '#D95F2B'}
+                onBlur={e => e.target.style.borderColor = '#C4CDD8'}
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="end-date">End date</Label>
+            <div>
+              <label style={labelStyle}>End date</label>
               <input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = '#D95F2B'}
+                onBlur={e => e.target.style.borderColor = '#C4CDD8'}
               />
             </div>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="description">
-              Description{' '}
-              <span className="text-muted-foreground font-normal">(optional)</span>
-            </Label>
-            <Textarea
-              id="description"
+
+          <div>
+            <label style={labelStyle}>Notes <span style={{ color: '#A0ADBC', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+            <textarea
               placeholder="A week exploring the coast…"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
+              value={description} onChange={e => setDescription(e.target.value)}
               rows={3}
+              style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+              onFocus={e => e.target.style.borderColor = '#D95F2B'}
+              onBlur={e => e.target.style.borderColor = '#C4CDD8'}
             />
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
+
+          {error && (
+            <div style={{ background: '#FCECEA', border: '1px solid #F5B8B4', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C23B2E' }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4 }}>
+            <button type="button" className="btn-away-secondary" onClick={handleClose} disabled={loading}>
               Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
+            </button>
+            <button type="submit" className="btn-away-primary" disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
               {loading ? 'Creating…' : 'Create trip'}
-            </Button>
+            </button>
           </div>
         </form>
       </DialogContent>
