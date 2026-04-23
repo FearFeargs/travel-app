@@ -121,7 +121,9 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
 
   function combineDateTime(timeStr) {
     if (!timeStr || !day?.date) return null
-    return `${day.date}T${timeStr}:00`
+    const [y, mo, d] = day.date.split('-').map(Number)
+    const [h, m]     = timeStr.split(':').map(Number)
+    return new Date(y, mo - 1, d, h, m).toISOString()
   }
 
   async function handleSubmit(e) {

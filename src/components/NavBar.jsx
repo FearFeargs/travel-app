@@ -43,7 +43,7 @@ export default function NavBar({ displayName, onNewTrip }) {
         style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', marginRight: 36 }}
       >
         <LogoMark size={26} />
-        <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: '0.14em', color: '#0B0F1A' }}>away</span>
+        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 600, letterSpacing: '0.18em', color: '#0B0F1A' }}>away</span>
       </div>
 
       {/* Nav links */}
