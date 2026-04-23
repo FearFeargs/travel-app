@@ -26,6 +26,7 @@ export default function NavBar({ displayName, onNewTrip }) {
 
   const navLinks = [
     { label: 'My Trips', path: '/dashboard' },
+    { label: 'Profile',  path: '/profile' },
   ]
 
   return (
@@ -70,20 +71,18 @@ export default function NavBar({ displayName, onNewTrip }) {
             + New trip
           </button>
         )}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={handleLogout}
-            title={`Sign out (${displayName})`}
-            style={{
-              width: 34, height: 34, borderRadius: '50%',
-              background: '#D95F2B', color: '#fff',
-              fontWeight: 600, fontSize: 14,
-              border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'DM Sans, sans-serif',
-            }}
-          >{initial}</button>
-        </div>
+        <button
+          onClick={() => navigate('/profile')}
+          title="Profile & settings"
+          style={{
+            width: 34, height: 34, borderRadius: '50%',
+            background: '#D95F2B', color: '#fff',
+            fontWeight: 600, fontSize: 14,
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'DM Sans, sans-serif',
+          }}
+        >{initial}</button>
       </div>
     </header>
   )

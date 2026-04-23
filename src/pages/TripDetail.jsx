@@ -235,7 +235,16 @@ export default function TripDetail() {
 
   const nights      = diffDays(trip.start_date, trip.end_date)
   const activeDay_obj = days[activeDay] ?? null
-  const dayItems    = activeDay_obj ? items.filter(i => i.day_id === activeDay_obj.id) : []
+  const dayItems    = activeDay_obj
+    ? items
+        .filter(i => i.day_id === activeDay_obj.id)
+        .sort((a, b) => {
+          if (!a.start_time && !b.start_time) return 0
+          if (!a.start_time) return 1
+          if (!b.start_time) return -1
+          return new Date(a.start_time) - new Date(b.start_time)
+        })
+    : []
 
   const plannedTotal = items.reduce((sum, i) => sum + (parseFloat(i.cost_amount) || 0), 0)
   const spentTotal   = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)

@@ -4,6 +4,7 @@ import Login from '@/pages/Login'
 import SignUp from '@/pages/SignUp'
 import Dashboard from '@/pages/Dashboard'
 import TripDetail from '@/pages/TripDetail'
+import Profile from '@/pages/Profile'
 
 export default function App() {
   return (
@@ -23,6 +24,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <TripDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         }
       />
