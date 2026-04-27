@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import NavBar from '@/components/NavBar'
 import AddItemModal from '@/components/AddItemModal'
 import AddExpenseModal from '@/components/AddExpenseModal'
+import CommentPanel from '@/components/CommentPanel'
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -176,6 +177,9 @@ export default function TripDetail() {
   const [budgetEditing, setBudgetEditing]   = useState(false)
   const [budgetInput, setBudgetInput]       = useState('')
   const [budgetCurrencyInput, setBudgetCurrencyInput] = useState('USD')
+  const [commentPanelOpen, setCommentPanelOpen] = useState(false)
+  const [commentCount, setCommentCount]     = useState(0)
+  const [recentComments, setRecentComments] = useState([])
 
   const loadItems = useCallback(async () => {
     if (!id) return
@@ -197,6 +201,19 @@ export default function TripDetail() {
     if (data) setExpenses(data)
   }, [id])
 
+  const loadCommentPreview = useCallback(async () => {
+    if (!id) return
+    const { data, count } = await supabase
+      .from('comments')
+      .select('id, body, created_at, users(display_name)', { count: 'exact' })
+      .eq('trip_id', id)
+      .is('item_id', null)
+      .order('created_at', { ascending: false })
+      .limit(2)
+    if (count != null) setCommentCount(count)
+    if (data) setRecentComments(data.reverse())
+  }, [id])
+
   useEffect(() => {
     if (!user) return
 
@@ -214,7 +231,8 @@ export default function TripDetail() {
 
     loadItems()
     loadExpenses()
-  }, [id, user, loadItems, loadExpenses])
+    loadCommentPreview()
+  }, [id, user, loadItems, loadExpenses, loadCommentPreview])
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#F9F7F4' }}>
@@ -558,6 +576,58 @@ export default function TripDetail() {
             ))}
           </div>
 
+          {/* Discussion card */}
+          <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', boxShadow: '0 2px 8px rgba(11,15,26,0.07)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F1A' }}>
+                Discussion
+                {commentCount > 0 && (
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 600, color: '#8C97A6', marginLeft: 8 }}>
+                    {commentCount}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setCommentPanelOpen(true)}
+                style={{ fontSize: 13, color: '#D95F2B', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, padding: 0 }}
+              >{commentCount > 0 ? 'View all →' : 'Open →'}</button>
+            </div>
+
+            {recentComments.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#A0ADBC', margin: 0 }}>No comments yet.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {recentComments.map(c => (
+                  <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: 24, height: 24, borderRadius: '50%', background: '#D95F2B',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 600, color: '#fff', flexShrink: 0,
+                    }}>
+                      {(c.users?.display_name || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#475563', marginBottom: 1 }}>{c.users?.display_name || 'Unknown'}</div>
+                      <div style={{ fontSize: 12, color: '#677585', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.body}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={() => setCommentPanelOpen(true)}
+              style={{
+                marginTop: 12, width: '100%', padding: '10px', borderRadius: 9,
+                fontSize: 13, fontWeight: 500, background: '#F9F7F4',
+                color: '#475563', border: '1.5px solid #E4E9EF',
+                cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: 'all 150ms',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#D95F2B'; e.currentTarget.style.color = '#D95F2B' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#E4E9EF'; e.currentTarget.style.color = '#475563' }}
+            >+ Add comment</button>
+          </div>
+
           {/* Members placeholder */}
           <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', boxShadow: '0 2px 8px rgba(11,15,26,0.07)' }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F1A', marginBottom: 8 }}>Travelers</div>
@@ -587,6 +657,15 @@ export default function TripDetail() {
         userId={user?.id}
         onAdded={loadExpenses}
         expense={editingExpense}
+      />
+
+      {/* Trip discussion panel */}
+      <CommentPanel
+        open={commentPanelOpen}
+        onClose={() => { setCommentPanelOpen(false); loadCommentPreview() }}
+        tripId={id}
+        userId={user?.id}
+        tripTitle={trip.title}
       />
     </div>
   )

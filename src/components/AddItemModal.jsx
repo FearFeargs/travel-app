@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import CommentThread from './CommentThread'
 
 const TYPES = [
   { value: 'flight',    label: 'Flight',    color: '#EBF0F7' },
@@ -74,7 +75,7 @@ function TimeSelect({ value, onChange }) {
   )
 }
 
-export default function AddItemModal({ open, onClose, day, tripId, userId, onAdded, item }) {
+export default function AddItemModal({ open, onClose, day, tripId, userId, onAdded, item, onItemCommentAdded }) {
   const isEdit = Boolean(item)
 
   const [title, setTitle]         = useState('')
@@ -290,6 +291,16 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
               value={url} onChange={e => setUrl(e.target.value)}
               onFocus={focusDusk} onBlur={blurSlate} />
           </div>
+
+          {/* Item-level comments (edit mode only) */}
+          {isEdit && item && (
+            <div style={{ borderTop: '1px solid #F4F6F8', paddingTop: 20, marginTop: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#677585', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 12 }}>
+                Comments
+              </div>
+              <CommentThread tripId={tripId} itemId={item.id} userId={userId} />
+            </div>
+          )}
 
           {error && (
             <div style={{ background: '#FCECEA', border: '1px solid #F5B8B4', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C23B2E' }}>
