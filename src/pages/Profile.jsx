@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { uploadImage } from '@/lib/uploadImage'
 import { useAuth } from '@/hooks/useAuth'
+import { useImageBrightness } from '@/hooks/useImageBrightness'
 import NavBar from '@/components/NavBar'
 
 const AVATAR_COLORS = [
@@ -48,27 +50,33 @@ function SettingRow({ label, value, children }) {
 }
 
 export default function Profile() {
-  const user     = useNavigate ? useNavigate() : null
-  const navigate = useNavigate()
-  const authUser = useAuth()
+  const navigate  = useNavigate()
+  const authUser  = useAuth()
 
   const [profile, setProfile]           = useState(null)
   const [tripCount, setTripCount]        = useState(0)
   const [loading, setLoading]            = useState(true)
 
-  // Edit display name
   const [editingName, setEditingName]    = useState(false)
   const [nameInput, setNameInput]        = useState('')
   const [nameSaving, setNameSaving]      = useState(false)
   const [nameError, setNameError]        = useState(null)
 
-  // Edit avatar color
   const [editingColor, setEditingColor]  = useState(false)
   const [colorSaving, setColorSaving]    = useState(false)
 
-  // Delete account
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+
+  const [headerHover, setHeaderHover]    = useState(false)
+  const [coverUploading, setCoverUploading]   = useState(false)
+  const [coverUploadError, setCoverUploadError] = useState(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarUploadError, setAvatarUploadError] = useState(null)
+  const [avatarHover, setAvatarHover]    = useState(false)
+
+  const coverFileRef  = useRef(null)
+  const avatarFileRef = useRef(null)
 
   useEffect(() => {
     if (!authUser) return
@@ -81,6 +89,17 @@ export default function Profile() {
       setLoading(false)
     })
   }, [authUser])
+
+  // Determine if avatar is a photo URL or hex color
+  const avatarIsPhoto = profile?.avatar_url && profile.avatar_url.startsWith('http')
+  const avatarColor   = !avatarIsPhoto && profile?.avatar_url?.startsWith('#')
+    ? profile.avatar_url : '#D95F2B'
+  const initial       = profile?.display_name ? profile.display_name.charAt(0).toUpperCase() : '?'
+
+  const coverUrl      = profile?.profile_cover_url || null
+  const headerIsDark  = useImageBrightness(coverUrl, 'top')
+  const textColor     = coverUrl ? (headerIsDark ? '#fff' : '#0B0F1A') : '#fff'
+  const subColor      = coverUrl ? (headerIsDark ? 'rgba(255,255,255,0.45)' : 'rgba(11,15,26,0.55)') : 'rgba(255,255,255,0.45)'
 
   async function saveName() {
     if (!nameInput.trim()) { setNameError('Name cannot be empty.'); return }
@@ -99,6 +118,31 @@ export default function Profile() {
     setEditingColor(false); setColorSaving(false)
   }
 
+  async function handleCoverUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCoverUploading(true); setCoverUploadError(null)
+    try {
+      const url = await uploadImage('images', `users/${authUser.id}/profile-cover`, file)
+      await supabase.from('users').update({ profile_cover_url: url }).eq('id', authUser.id)
+      setProfile(p => ({ ...p, profile_cover_url: url }))
+    } catch (err) { setCoverUploadError(err?.message || String(err)) }
+    finally { setCoverUploading(false); e.target.value = '' }
+  }
+
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarUploading(true); setAvatarUploadError(null)
+    try {
+      const url = await uploadImage('images', `users/${authUser.id}/avatar`, file)
+      await supabase.from('users').update({ avatar_url: url }).eq('id', authUser.id)
+      setProfile(p => ({ ...p, avatar_url: url }))
+      setEditingColor(false)
+    } catch (err) { setAvatarUploadError(err?.message || String(err)) }
+    finally { setAvatarUploading(false); e.target.value = '' }
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut()
     navigate('/login')
@@ -114,12 +158,6 @@ export default function Profile() {
     ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : ''
 
-  const avatarColor = profile?.avatar_url && profile.avatar_url.startsWith('#')
-    ? profile.avatar_url
-    : '#D95F2B'
-
-  const initial = profile?.display_name ? profile.display_name.charAt(0).toUpperCase() : '?'
-
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#F9F7F4' }}>
       <NavBar displayName={profile?.display_name} />
@@ -132,38 +170,112 @@ export default function Profile() {
       <NavBar displayName={profile?.display_name} />
 
       {/* Header */}
-      <div style={{ background: '#1C2E4A', marginTop: 62 }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 40px 56px' }}>
+      <div
+        style={{ marginTop: 62, position: 'relative', overflow: 'hidden' }}
+        onMouseEnter={() => setHeaderHover(true)}
+        onMouseLeave={() => setHeaderHover(false)}
+      >
+        {/* Background: cover photo or solid navy */}
+        {coverUrl ? (
+          <img src={coverUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ position: 'absolute', inset: 0, background: '#1C2E4A' }} />
+        )}
+
+        {/* Overlay */}
+        {coverUrl && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: headerIsDark ? 'rgba(11,15,26,0.42)' : 'rgba(11,15,26,0.28)',
+          }} />
+        )}
+
+        {/* Cover upload button */}
+        <input ref={coverFileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleCoverUpload} />
+        <button
+          onClick={() => coverFileRef.current?.click()}
+          disabled={coverUploading}
+          style={{
+            position: 'absolute', top: 16, right: 24, zIndex: 2,
+            padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+            background: 'rgba(0,0,0,0.45)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)',
+            cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', backdropFilter: 'blur(6px)',
+            opacity: headerHover || coverUploading ? 1 : 0, transition: 'opacity 200ms',
+          }}
+        >{coverUploading ? 'Uploading…' : '⬆ Cover photo'}</button>
+        {coverUploadError && (
+          <div style={{ position: 'absolute', top: 56, right: 24, maxWidth: 300, padding: '10px 14px', borderRadius: 8, background: 'rgba(194,59,46,0.92)', color: '#fff', fontSize: 12, fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5, zIndex: 3 }}>
+            <div style={{ fontWeight: 600, marginBottom: 3 }}>Upload failed</div>
+            <div>{coverUploadError}</div>
+            <div style={{ marginTop: 4, opacity: 0.75 }}>JPEG · PNG · WebP · Max 5 MB</div>
+          </div>
+        )}
+
+        <div style={{ position: 'relative', maxWidth: 720, margin: '0 auto', padding: '48px 40px 56px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
 
             {/* Avatar */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div
+              style={{ position: 'relative', flexShrink: 0 }}
+              onMouseEnter={() => setAvatarHover(true)}
+              onMouseLeave={() => setAvatarHover(false)}
+            >
+              {/* Avatar circle or photo */}
               <div style={{
                 width: 80, height: 80, borderRadius: '50%',
-                background: avatarColor,
+                background: avatarIsPhoto ? 'transparent' : avatarColor,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: 'Georgia, serif', fontSize: 32, color: '#fff',
-                userSelect: 'none',
-              }}>{initial}</div>
-              <button
-                onClick={() => setEditingColor(c => !c)}
-                style={{
-                  position: 'absolute', bottom: 0, right: 0,
-                  width: 26, height: 26, borderRadius: '50%',
-                  background: '#D95F2B', border: '2px solid #1C2E4A',
-                  color: '#fff', fontSize: 13, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-                title="Change color"
-              >✎</button>
+                userSelect: 'none', overflow: 'hidden', position: 'relative',
+              }}>
+                {avatarIsPhoto ? (
+                  <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : initial}
+
+                {/* Avatar upload overlay on hover */}
+                <div
+                  onClick={() => avatarFileRef.current?.click()}
+                  style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    background: 'rgba(11,15,26,0.55)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', fontSize: 20,
+                    opacity: avatarHover || avatarUploading ? 1 : 0,
+                    transition: 'opacity 150ms',
+                  }}
+                >{avatarUploading ? '…' : '⬆'}</div>
+              </div>
+              {avatarUploadError && (
+                <div style={{ position: 'absolute', top: 88, left: 0, width: 220, padding: '8px 12px', borderRadius: 8, background: 'rgba(194,59,46,0.92)', color: '#fff', fontSize: 11, fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5, zIndex: 3 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>Upload failed</div>
+                  <div>{avatarUploadError}</div>
+                  <div style={{ marginTop: 3, opacity: 0.75 }}>JPEG · PNG · WebP · Max 5 MB</div>
+                </div>
+              )}
+
+              {/* Color picker toggle (only when no photo) */}
+              {!avatarIsPhoto && (
+                <button
+                  onClick={() => setEditingColor(c => !c)}
+                  style={{
+                    position: 'absolute', bottom: 0, right: 0,
+                    width: 26, height: 26, borderRadius: '50%',
+                    background: '#D95F2B', border: '2px solid ' + (coverUrl ? 'transparent' : '#1C2E4A'),
+                    color: '#fff', fontSize: 13, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  title="Change color"
+                >✎</button>
+              )}
+              <input ref={avatarFileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleAvatarUpload} />
             </div>
 
             {/* Name + meta */}
             <div>
-              <div style={{ fontFamily: 'Georgia, serif', fontSize: 34, fontWeight: 400, color: '#fff', lineHeight: 1.1 }}>
+              <div style={{ fontFamily: 'Georgia, serif', fontSize: 34, fontWeight: 400, color: textColor, lineHeight: 1.1 }}>
                 {profile?.display_name}
               </div>
-              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>
+              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: subColor, marginTop: 6 }}>
                 {profile?.email} · Since {memberSince}
               </div>
             </div>
@@ -171,7 +283,7 @@ export default function Profile() {
 
           {/* Color picker */}
           {editingColor && (
-            <div style={{ marginTop: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ marginTop: 20, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               {AVATAR_COLORS.map(c => (
                 <button
                   key={c} onClick={() => saveColor(c)} disabled={colorSaving}
@@ -182,6 +294,14 @@ export default function Profile() {
                   }}
                 />
               ))}
+              <button
+                onClick={() => avatarFileRef.current?.click()}
+                style={{
+                  padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)',
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                }}
+              >Upload photo</button>
             </div>
           )}
 
@@ -189,8 +309,8 @@ export default function Profile() {
           <div style={{ display: 'flex', gap: 32, marginTop: 28 }}>
             {[['Trips', tripCount]].map(([label, val]) => (
               <div key={label}>
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 600, color: '#fff' }}>{val}</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{label}</div>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 600, color: textColor }}>{val}</div>
+                <div style={{ fontSize: 13, color: subColor, marginTop: 2 }}>{label}</div>
               </div>
             ))}
           </div>

@@ -36,7 +36,9 @@ export default function Login() {
       setLoading(false)
       return
     }
-    navigate('/dashboard')
+    const redirect = sessionStorage.getItem('invite_redirect')
+    if (redirect) { sessionStorage.removeItem('invite_redirect'); navigate(redirect) }
+    else navigate('/dashboard')
   }
 
   return (

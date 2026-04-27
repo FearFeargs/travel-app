@@ -2,10 +2,14 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useRef } from 'react'
 import NavBar from '@/components/NavBar'
 import AddItemModal from '@/components/AddItemModal'
 import AddExpenseModal from '@/components/AddExpenseModal'
 import CommentPanel from '@/components/CommentPanel'
+import DeleteTripModal from '@/components/DeleteTripModal'
+import { uploadImage } from '@/lib/uploadImage'
+import { useImageBrightness } from '@/hooks/useImageBrightness'
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -180,6 +184,18 @@ export default function TripDetail() {
   const [commentPanelOpen, setCommentPanelOpen] = useState(false)
   const [commentCount, setCommentCount]     = useState(0)
   const [recentComments, setRecentComments] = useState([])
+  const [deleteTripOpen, setDeleteTripOpen]   = useState(false)
+  const [heroHover, setHeroHover]             = useState(false)
+  const [coverUploading, setCoverUploading]   = useState(false)
+  const [coverUploadError, setCoverUploadError] = useState(null)
+  const coverFileRef  = useRef(null)
+  const heroIsDark    = useImageBrightness(trip?.cover_image_url)
+  const [invites, setInvites]               = useState([])
+  const [inviteEmail, setInviteEmail]       = useState('')
+  const [inviteRole, setInviteRole]         = useState('editor')
+  const [inviteSending, setInviteSending]   = useState(false)
+  const [inviteError, setInviteError]       = useState(null)
+  const [copiedToken, setCopiedToken]       = useState(null)
 
   const loadItems = useCallback(async () => {
     if (!id) return
@@ -199,6 +215,16 @@ export default function TripDetail() {
       .eq('trip_id', id)
       .order('expense_date', { ascending: true })
     if (data) setExpenses(data)
+  }, [id])
+
+  const loadInvites = useCallback(async () => {
+    if (!id) return
+    const { data } = await supabase
+      .from('invites')
+      .select('id, email, role, token, accepted_at, expires_at')
+      .eq('trip_id', id)
+      .order('created_at', { ascending: false })
+    if (data) setInvites(data)
   }, [id])
 
   const loadCommentPreview = useCallback(async () => {
@@ -232,7 +258,8 @@ export default function TripDetail() {
     loadItems()
     loadExpenses()
     loadCommentPreview()
-  }, [id, user, loadItems, loadExpenses, loadCommentPreview])
+    loadInvites()
+  }, [id, user, loadItems, loadExpenses, loadCommentPreview, loadInvites])
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#F9F7F4' }}>
@@ -286,14 +313,80 @@ export default function TripDetail() {
     }
   }
 
+  const isOwner = trip?.owner_id === user?.id
+
+  async function handleCoverUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCoverUploading(true)
+    setCoverUploadError(null)
+    try {
+      const url = await uploadImage('images', `trips/${id}/cover`, file)
+      await supabase.from('trips').update({ cover_image_url: url }).eq('id', id)
+      setTrip(t => ({ ...t, cover_image_url: url }))
+    } catch (err) {
+      setCoverUploadError(err?.message || String(err))
+    } finally {
+      setCoverUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  async function sendInvite(e) {
+    e.preventDefault()
+    if (!inviteEmail.trim()) return
+    setInviteSending(true); setInviteError(null)
+    const { error } = await supabase.from('invites').insert({
+      trip_id:            id,
+      email:              inviteEmail.trim().toLowerCase(),
+      invited_by_user_id: user.id,
+      role:               inviteRole,
+    })
+    if (error) { setInviteError(error.message); setInviteSending(false); return }
+    setInviteEmail('')
+    await loadInvites()
+    setInviteSending(false)
+  }
+
+  async function revokeInvite(inviteId) {
+    await supabase.from('invites').delete().eq('id', inviteId)
+    setInvites(prev => prev.filter(i => i.id !== inviteId))
+  }
+
+  function copyInviteLink(token) {
+    navigator.clipboard.writeText(`${window.location.origin}/invite/${token}`)
+    setCopiedToken(token)
+    setTimeout(() => setCopiedToken(null), 2000)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#F9F7F4' }}>
       <NavBar displayName={displayName} />
 
       {/* Hero */}
-      <div style={{ height: 320, position: 'relative', overflow: 'hidden', marginTop: 62 }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(145deg,#2E5080 0%,#8B6B3D 55%,#C4956A 100%)' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(11,15,26,0.25) 0%, rgba(11,15,26,0.65) 100%)' }} />
+      <div
+        style={{ height: 320, position: 'relative', overflow: 'hidden', marginTop: 62 }}
+        onMouseEnter={() => setHeroHover(true)}
+        onMouseLeave={() => setHeroHover(false)}
+      >
+        {/* Background: photo or gradient */}
+        {trip.cover_image_url ? (
+          <img src={trip.cover_image_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(145deg,#2E5080 0%,#8B6B3D 55%,#C4956A 100%)' }} />
+        )}
+
+        {/* Adaptive overlay — denser when image is bright so text stays readable */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: trip.cover_image_url
+            ? (heroIsDark
+                ? 'linear-gradient(to bottom, rgba(11,15,26,0.22) 0%, rgba(11,15,26,0.60) 100%)'
+                : 'linear-gradient(to bottom, rgba(11,15,26,0.38) 0%, rgba(11,15,26,0.78) 100%)')
+            : 'linear-gradient(to bottom, rgba(11,15,26,0.25) 0%, rgba(11,15,26,0.65) 100%)',
+        }} />
+
+        {/* Text — always white over the darkened overlay */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 40px 32px' }}>
           <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
@@ -307,9 +400,33 @@ export default function TripDetail() {
                 )}
               </div>
             </div>
-            <button className="btn-away-secondary" onClick={() => navigate('/dashboard')} style={{ flexShrink: 0 }}>
-              ← All trips
-            </button>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
+              {isOwner && (
+                <>
+                  <input ref={coverFileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} onChange={handleCoverUpload} />
+                  <button
+                    onClick={() => coverFileRef.current?.click()}
+                    disabled={coverUploading}
+                    style={{
+                      padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: 'rgba(0,0,0,0.45)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)',
+                      cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', backdropFilter: 'blur(6px)',
+                      opacity: heroHover || coverUploading ? 1 : 0, transition: 'opacity 200ms',
+                    }}
+                  >{coverUploading ? 'Uploading…' : '⬆ Cover photo'}</button>
+                  {coverUploadError && (
+                    <div style={{ position: 'absolute', bottom: 80, right: 40, maxWidth: 300, padding: '10px 14px', borderRadius: 8, background: 'rgba(194,59,46,0.92)', color: '#fff', fontSize: 12, fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 3 }}>Upload failed</div>
+                      <div>{coverUploadError}</div>
+                      <div style={{ marginTop: 4, opacity: 0.75 }}>JPEG · PNG · WebP · Max 5 MB</div>
+                    </div>
+                  )}
+                </>
+              )}
+              <button className="btn-away-secondary" onClick={() => navigate('/dashboard')}>
+                ← All trips
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -628,11 +745,96 @@ export default function TripDetail() {
             >+ Add comment</button>
           </div>
 
-          {/* Members placeholder */}
+          {/* Travelers / invites card */}
           <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', boxShadow: '0 2px 8px rgba(11,15,26,0.07)' }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F1A', marginBottom: 8 }}>Travelers</div>
-            <p style={{ fontSize: 13, color: '#8C97A6' }}>Invite and manage members — coming soon.</p>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F1A', marginBottom: 14 }}>Travelers</div>
+
+            {isOwner && (
+              <form onSubmit={sendInvite} style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                  <input
+                    type="email"
+                    placeholder="email@example.com"
+                    value={inviteEmail}
+                    onChange={e => setInviteEmail(e.target.value)}
+                    style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #C4CDD8', fontSize: 13, color: '#0B0F1A', background: '#fff', outline: 'none', fontFamily: 'DM Sans, sans-serif', transition: 'border-color 150ms' }}
+                    onFocus={e => e.target.style.borderColor = '#D95F2B'}
+                    onBlur={e => e.target.style.borderColor = '#C4CDD8'}
+                  />
+                  <select
+                    value={inviteRole}
+                    onChange={e => setInviteRole(e.target.value)}
+                    style={{ padding: '8px 10px', borderRadius: 8, border: '1.5px solid #C4CDD8', fontSize: 13, color: '#0B0F1A', background: '#fff', outline: 'none', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}
+                  >
+                    <option value="editor">Editor</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  disabled={inviteSending || !inviteEmail.trim()}
+                  style={{
+                    width: '100%', padding: '9px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    background: inviteSending || !inviteEmail.trim() ? '#E4E9EF' : '#1C2E4A',
+                    color: inviteSending || !inviteEmail.trim() ? '#8C97A6' : '#fff',
+                    border: 'none', cursor: inviteSending || !inviteEmail.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: 'DM Sans, sans-serif', transition: 'all 150ms',
+                  }}
+                >{inviteSending ? 'Sending…' : '+ Send invite'}</button>
+                {inviteError && <div style={{ fontSize: 12, color: '#C23B2E', marginTop: 6 }}>{inviteError}</div>}
+              </form>
+            )}
+
+            {invites.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#8C97A6', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 2 }}>Pending invites</div>
+                {invites.map(inv => {
+                  const expired  = new Date(inv.expires_at) < new Date()
+                  const accepted = Boolean(inv.accepted_at)
+                  return (
+                    <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: '#F9F7F4' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: '#0B0F1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.email}</div>
+                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: accepted ? '#2A7D5F' : expired ? '#C23B2E' : '#8C97A6', marginTop: 1 }}>
+                          {accepted ? 'Accepted' : expired ? 'Expired' : inv.role}
+                        </div>
+                      </div>
+                      {!accepted && !expired && (
+                        <button
+                          onClick={() => copyInviteLink(inv.token)}
+                          title="Copy invite link"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: copiedToken === inv.token ? '#2A7D5F' : '#8C97A6', padding: '2px 4px', borderRadius: 4, transition: 'color 150ms', flexShrink: 0 }}
+                        >{copiedToken === inv.token ? '✓' : '⎘'}</button>
+                      )}
+                      {isOwner && !accepted && (
+                        <button
+                          onClick={() => revokeInvite(inv.id)}
+                          title="Revoke invite"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#C4CDD8', padding: '2px 4px', borderRadius: 4, transition: 'color 150ms', flexShrink: 0 }}
+                          onMouseEnter={e => e.currentTarget.style.color = '#C23B2E'}
+                          onMouseLeave={e => e.currentTarget.style.color = '#C4CDD8'}
+                        >×</button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {invites.length === 0 && !isOwner && (
+              <p style={{ fontSize: 13, color: '#8C97A6', margin: 0 }}>No pending invites.</p>
+            )}
           </div>
+
+          {/* Delete trip */}
+          {isOwner && (
+            <button
+              onClick={() => setDeleteTripOpen(true)}
+              style={{ width: '100%', padding: '11px', borderRadius: 12, fontSize: 13, fontWeight: 600, background: '#fff', color: '#C23B2E', border: '1.5px solid #C23B2E', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: 'all 150ms', boxShadow: '0 2px 8px rgba(11,15,26,0.07)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#FCECEA' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#fff' }}
+            >Delete trip</button>
+          )}
         </div>
       </div>
 
@@ -657,6 +859,15 @@ export default function TripDetail() {
         userId={user?.id}
         onAdded={loadExpenses}
         expense={editingExpense}
+      />
+
+      {/* Delete trip modal */}
+      <DeleteTripModal
+        open={deleteTripOpen}
+        onClose={() => setDeleteTripOpen(false)}
+        trip={trip}
+        userEmail={user?.email}
+        onDeleted={() => navigate('/dashboard')}
       />
 
       {/* Trip discussion panel */}
