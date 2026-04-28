@@ -5,6 +5,7 @@ import Login from '@/pages/Login'
 import SignUp from '@/pages/SignUp'
 import Dashboard from '@/pages/Dashboard'
 import TripDetail from '@/pages/TripDetail'
+import SharedTripView from '@/pages/SharedTripView'
 import Profile from '@/pages/Profile'
 import Settings from '@/pages/Settings'
 import InviteAccept from '@/pages/InviteAccept'
@@ -47,6 +48,7 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="/trips/:id/share" element={<SharedTripView />} />
       <Route path="/invite/:token" element={<InviteAccept />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

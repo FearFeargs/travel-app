@@ -15,12 +15,12 @@ const labelStyle = {
   letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6,
 }
 
-export default function NewTripModal({ open, onClose }) {
+export default function NewTripModal({ open, onClose, initialDestination = '', initialStartDate = '', initialEndDate = '' }) {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
-  const [destination, setDestination] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [destination, setDestination] = useState(initialDestination)
+  const [startDate, setStartDate] = useState(initialStartDate)
+  const [endDate, setEndDate] = useState(initialEndDate)
   const [description, setDescription] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -55,7 +55,7 @@ export default function NewTripModal({ open, onClose }) {
 
   function handleClose() {
     if (loading) return
-    setTitle(''); setDestination(''); setStartDate(''); setEndDate('')
+    setTitle(''); setDestination(initialDestination); setStartDate(initialStartDate); setEndDate(initialEndDate)
     setDescription(''); setError(null); onClose()
   }
 

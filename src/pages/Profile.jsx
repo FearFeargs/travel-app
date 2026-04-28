@@ -55,6 +55,7 @@ export default function Profile() {
 
   const [profile, setProfile]           = useState(null)
   const [tripCount, setTripCount]        = useState(0)
+  const [trips, setTrips]               = useState([])
   const [loading, setLoading]            = useState(true)
 
   const [editingName, setEditingName]    = useState(false)
@@ -82,10 +83,13 @@ export default function Profile() {
     if (!authUser) return
     Promise.all([
       supabase.from('users').select('*').eq('id', authUser.id).single(),
-      supabase.from('trip_members').select('trip_id', { count: 'exact' }).eq('user_id', authUser.id),
+      supabase.from('trips').select('id, destination_summary').eq('owner_id', authUser.id),
     ]).then(([profileRes, tripsRes]) => {
       if (profileRes.data) setProfile(profileRes.data)
-      if (tripsRes.count != null) setTripCount(tripsRes.count)
+      if (tripsRes.data) {
+        setTrips(tripsRes.data)
+        setTripCount(tripsRes.data.length)
+      }
       setLoading(false)
     })
   }, [authUser])
@@ -271,7 +275,7 @@ export default function Profile() {
             </div>
 
             {/* Name + meta */}
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 34, fontWeight: 400, color: textColor, lineHeight: 1.1 }}>
                 {profile?.display_name}
               </div>
@@ -279,6 +283,24 @@ export default function Profile() {
                 {profile?.email} · Since {memberSince}
               </div>
             </div>
+
+            {/* Stats */}
+            {tripCount > 0 && (
+              <div style={{ display: 'flex', gap: 32, textAlign: 'center', flexShrink: 0 }}>
+                {[
+                  { value: tripCount, label: tripCount === 1 ? 'Trip' : 'Trips' },
+                  {
+                    value: new Set(trips.map(t => t.destination_summary?.split(',').pop()?.trim()).filter(Boolean)).size,
+                    label: 'Destinations',
+                  },
+                ].map(({ value, label }) => value > 0 ? (
+                  <div key={label}>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 600, color: textColor }}>{value}</div>
+                    <div style={{ fontSize: 12, color: subColor, marginTop: 3 }}>{label}</div>
+                  </div>
+                ) : null)}
+              </div>
+            )}
           </div>
 
           {/* Color picker */}

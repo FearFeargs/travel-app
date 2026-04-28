@@ -196,6 +196,8 @@ export default function TripDetail() {
   const [inviteSending, setInviteSending]   = useState(false)
   const [inviteError, setInviteError]       = useState(null)
   const [copiedToken, setCopiedToken]       = useState(null)
+  const [addingDay, setAddingDay]           = useState(false)
+  const [sharecopied, setShareCopied]       = useState(false)
 
   const loadItems = useCallback(async () => {
     if (!id) return
@@ -348,6 +350,39 @@ export default function TripDetail() {
     setInviteSending(false)
   }
 
+  async function handleAddDay() {
+    if (addingDay || days.length === 0) return
+    setAddingDay(true)
+    const lastDay = days[days.length - 1]
+    const [y, m, d] = lastDay.date.split('-').map(Number)
+    const next = new Date(y, m - 1, d + 1)
+    const nextDate = next.toISOString().slice(0, 10)
+    const { error } = await supabase.from('days').insert({
+      trip_id:    id,
+      date:       nextDate,
+      day_number: lastDay.day_number + 1,
+    })
+    if (!error) {
+      const { data } = await supabase.from('days').select('*').eq('trip_id', id).order('day_number', { ascending: true })
+      if (data) {
+        setDays(data)
+        setActiveDay(data.length - 1)
+      }
+    }
+    setAddingDay(false)
+  }
+
+  async function handleShareTrip() {
+    if (!trip.is_public) {
+      await supabase.from('trips').update({ is_public: true }).eq('id', id)
+      setTrip(t => ({ ...t, is_public: true }))
+    }
+    const url = `${window.location.origin}/trips/${id}/share`
+    navigator.clipboard.writeText(url)
+    setShareCopied(true)
+    setTimeout(() => setShareCopied(false), 2500)
+  }
+
   async function revokeInvite(inviteId) {
     await supabase.from('invites').delete().eq('id', inviteId)
     setInvites(prev => prev.filter(i => i.id !== inviteId))
@@ -462,7 +497,7 @@ export default function TripDetail() {
             ) : (
               <>
                 {/* Day tabs */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 28, flexWrap: 'wrap', alignItems: 'center' }}>
                   {days.map((day, i) => (
                     <button
                       key={day.id}
@@ -480,6 +515,23 @@ export default function TripDetail() {
                       <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: activeDay === i ? 600 : 400 }}>{formatDateShort(day.date)}</div>
                     </button>
                   ))}
+                  {isOwner && (
+                    <button
+                      onClick={handleAddDay}
+                      disabled={addingDay}
+                      style={{
+                        padding: '9px 16px', borderRadius: 10, cursor: addingDay ? 'not-allowed' : 'pointer',
+                        fontFamily: 'DM Sans, sans-serif', transition: 'all 150ms',
+                        background: '#fff', color: '#D95F2B',
+                        border: '1.5px solid #D95F2B', fontSize: 13, fontWeight: 600,
+                        opacity: addingDay ? 0.6 : 1,
+                      }}
+                      onMouseEnter={e => { if (!addingDay) { e.currentTarget.style.background = '#FEF5F0' } }}
+                      onMouseLeave={e => { e.currentTarget.style.background = '#fff' }}
+                    >
+                      {addingDay ? '…' : '+ Add day'}
+                    </button>
+                  )}
                 </div>
 
                 {/* Items for active day */}
@@ -675,7 +727,7 @@ export default function TripDetail() {
             })()}
           </div>
 
-          {/* Trip info */}
+          {/* Trip details */}
           <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', boxShadow: '0 2px 8px rgba(11,15,26,0.07)' }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F1A', marginBottom: 14 }}>Trip details</div>
             {[
@@ -691,6 +743,65 @@ export default function TripDetail() {
                 <span style={{ fontFamily: label === 'Items' || label === 'Expenses' || label === 'Duration' ? 'JetBrains Mono, monospace' : 'inherit', fontSize: 13, fontWeight: 500, color: '#0B0F1A' }}>{val}</span>
               </div>
             ))}
+          </div>
+
+          {/* Documents — items that have a URL */}
+          {items.filter(i => i.url).length > 0 && (
+            <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', boxShadow: '0 2px 8px rgba(11,15,26,0.07)' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F1A', marginBottom: 14 }}>Documents</div>
+              {items.filter(i => i.url).map((item, idx, arr) => {
+                const cfg = TYPE_CONFIG[item.item_type] || TYPE_CONFIG.other
+                return (
+                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: idx < arr.length - 1 ? '1px solid #F4F6F8' : 'none' }}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{cfg.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#0B0F1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                      <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: '#8C97A6', marginTop: 1 }}>{cfg.label}</div>
+                    </div>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 14, color: '#D95F2B', fontWeight: 500, textDecoration: 'none', flexShrink: 0 }}
+                    >↗</a>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Share trip */}
+          <div style={{ background: '#F5F0E8', borderRadius: 16, padding: '18px 20px' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F1A', marginBottom: 6 }}>Share this trip</div>
+            <div style={{ fontSize: 13, color: '#677585', marginBottom: 14, lineHeight: 1.5 }}>
+              {trip.is_public ? 'Anyone with the link can view this itinerary.' : 'Invite travel companions or share a read-only view.'}
+            </div>
+            <button
+              onClick={handleShareTrip}
+              style={{
+                width: '100%', padding: '11px', borderRadius: 9999, fontSize: 13, fontWeight: 600,
+                background: sharecopied ? '#2A7D5F' : '#1C2E4A', color: '#fff',
+                border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                transition: 'background 200ms', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              }}
+            >
+              {sharecopied ? (
+                <><span>✓</span> Link copied!</>
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                    <path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/>
+                  </svg>
+                  Share trip link
+                </>
+              )}
+            </button>
+            {trip.is_public && (
+              <div style={{ marginTop: 8, fontSize: 11, color: '#8C97A6', textAlign: 'center', fontFamily: 'JetBrains Mono, monospace' }}>
+                Public · read-only
+              </div>
+            )}
           </div>
 
           {/* Discussion card */}
