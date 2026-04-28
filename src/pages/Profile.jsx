@@ -225,7 +225,7 @@ export default function Profile() {
                 width: 80, height: 80, borderRadius: '50%',
                 background: avatarIsPhoto ? 'transparent' : avatarColor,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'Georgia, serif', fontSize: 32, color: '#fff',
+                fontFamily: "'California Sunshine', Georgia, serif", fontSize: 32, color: '#fff',
                 userSelect: 'none', overflow: 'hidden', position: 'relative',
               }}>
                 {avatarIsPhoto ? (
@@ -272,7 +272,7 @@ export default function Profile() {
 
             {/* Name + meta */}
             <div>
-              <div style={{ fontFamily: 'Georgia, serif', fontSize: 34, fontWeight: 400, color: textColor, lineHeight: 1.1 }}>
+              <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 34, fontWeight: 400, color: textColor, lineHeight: 1.1 }}>
                 {profile?.display_name}
               </div>
               <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: subColor, marginTop: 6 }}>

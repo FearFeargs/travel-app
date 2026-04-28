@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { markSessionActive } from '@/lib/sessionPersistence'
 
 const LogoMark = () => (
   <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
@@ -36,6 +37,7 @@ export default function Login() {
       setLoading(false)
       return
     }
+    markSessionActive()
     const redirect = sessionStorage.getItem('invite_redirect')
     if (redirect) { sessionStorage.removeItem('invite_redirect'); navigate(redirect) }
     else navigate('/dashboard')
@@ -51,7 +53,7 @@ export default function Login() {
 
       {/* Card */}
       <div style={{ width: '100%', maxWidth: 400, background: '#fff', borderRadius: 20, padding: '36px 36px 32px', boxShadow: '0 4px 24px rgba(11,15,26,0.10)' }}>
-        <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 6 }}>Welcome back</h1>
+        <h1 style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 6 }}>Welcome back</h1>
         <p style={{ fontSize: 14, color: '#677585', marginBottom: 28 }}>Log in to your account</p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

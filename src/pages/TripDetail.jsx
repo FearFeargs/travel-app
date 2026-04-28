@@ -390,7 +390,7 @@ export default function TripDetail() {
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 40px 32px' }}>
           <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontFamily: 'Georgia, serif', fontSize: 52, fontWeight: 400, color: '#fff', lineHeight: 1.1 }}>{trip.title}</div>
+              <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 52, fontWeight: 400, color: '#fff', lineHeight: 1.1 }}>{trip.title}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 10 }}>
                 <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.04em' }}>
                   {formatDateLong(trip.start_date)} → {formatDateLong(trip.end_date)} · {nights} {nights === 1 ? 'night' : 'nights'}
@@ -456,7 +456,7 @@ export default function TripDetail() {
           {activeView === 'itinerary' && (
             days.length === 0 ? (
               <div style={{ background: '#fff', borderRadius: 16, padding: '40px 32px', textAlign: 'center', boxShadow: '0 2px 8px rgba(11,15,26,0.07)' }}>
-                <div style={{ fontFamily: 'Georgia, serif', fontSize: 22, color: '#0B0F1A', marginBottom: 8 }}>No days yet</div>
+                <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, fontWeight: 500, color: '#0B0F1A', marginBottom: 8 }}>No days yet</div>
                 <p style={{ fontSize: 14, color: '#677585' }}>This trip was created before day generation was added. Create a new trip to get a full itinerary.</p>
               </div>
             ) : (

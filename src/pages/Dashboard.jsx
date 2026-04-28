@@ -63,7 +63,7 @@ function TripCard({ trip, onClick }) {
 
       {/* Text */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '20px 20px 18px' }}>
-        <div style={{ fontFamily: 'Georgia, serif', fontSize: 24, fontWeight: 400, color: textColor, lineHeight: 1.2 }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 24, fontWeight: 500, color: textColor, lineHeight: 1.2 }}>
           {trip.title}
         </div>
         <div style={{ fontSize: 13, color: subColor, marginTop: 5 }}>
@@ -126,7 +126,7 @@ function DashboardHero({ displayName, coverUrl, onCoverChange, onNewTrip }) {
 
       {/* Content */}
       <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '56px 40px 64px' }}>
-        <div style={{ fontFamily: 'Georgia, serif', fontSize: 48, fontWeight: 400, color: textColor, lineHeight: 1.1, marginBottom: 10 }}>
+        <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 48, fontWeight: 400, color: textColor, lineHeight: 1.1, marginBottom: 10 }}>
           {displayName ? `Good to see you, ${displayName.split(' ')[0]}.` : 'Your trips.'}
         </div>
         <p style={{ fontSize: 16, color: subColor, marginBottom: 28 }}>Everything in one place.</p>
@@ -209,14 +209,14 @@ export default function Dashboard() {
           <div style={{ color: '#8C97A6', fontSize: 15 }}>Loading…</div>
         ) : trips.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '64px 24px' }}>
-            <div style={{ fontFamily: 'Georgia, serif', fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 10 }}>Where to next?</div>
+            <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 10 }}>Where to next?</div>
             <p style={{ fontSize: 15, color: '#677585', marginBottom: 28 }}>Your trips will appear here once you create one.</p>
             <button className="btn-away-primary" onClick={() => setModalOpen(true)}>Plan a trip</button>
           </div>
         ) : (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
-              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 28, fontWeight: 400, color: '#0B0F1A' }}>Your trips</h2>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, fontWeight: 500, color: '#0B0F1A' }}>Your trips</h2>
               <span style={{ fontSize: 14, color: '#8C97A6' }}>{trips.length} {trips.length === 1 ? 'trip' : 'trips'}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>

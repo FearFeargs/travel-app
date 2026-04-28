@@ -41,7 +41,7 @@ export default function CommentPanel({ open, onClose, tripId, userId, tripTitle 
           flexShrink: 0,
         }}>
           <div>
-            <div style={{ fontFamily: 'Georgia, serif', fontSize: 18, fontWeight: 400, color: '#0B0F1A' }}>
+            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, fontWeight: 400, color: '#0B0F1A' }}>
               Trip discussion
             </div>
             {tripTitle && (

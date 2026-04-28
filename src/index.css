@@ -1,5 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Cormorant+Garamond:wght@400;500&display=swap');
+
+@font-face {
+  font-family: 'California Sunshine';
+  src: url('/fonts/CaliforniaSunshine-Alternate.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* shadcn/tailwind.css inlined (package path not exported) */
 @theme inline {
@@ -30,8 +39,9 @@
   &:where([data-disabled="true"]), &:where([data-disabled]:not([data-disabled="false"])) { @slot; }
 }
 
-/* ── Away Design Tokens ──────────────────────────────────────── */
+/* ── Away Design System v2 Tokens ───────────────────────────────── */
 :root {
+  /* shadcn semantic aliases */
   --background:             #F9F7F4;
   --foreground:             #0B0F1A;
   --card:                   #FFFFFF;
@@ -51,12 +61,99 @@
   --input:                  #C4CDD8;
   --ring:                   #D95F2B;
   --radius:                 0.75rem;
+
+  /* Brand Primaries */
+  --color-midnight:         #0B0F1A;
+  --color-horizon:          #1C2E4A;
+  --color-dusk:             #D95F2B;
+  --color-dusk-light:       #F27C4A;
+  --color-dusk-dark:        #B34A1C;
+
+  /* Warm Surfaces */
+  --color-sand:             #F5F0E8;
+  --color-sand-dark:        #EDE6D8;
+  --color-parchment:        #F9F7F4;
+
+  /* Cool Surfaces */
+  --color-mist:             #EBF0F7;
+  --color-mist-dark:        #D6DFE9;
+
+  /* Neutrals */
+  --color-slate-100:        #F4F6F8;
+  --color-slate-200:        #E4E9EF;
+  --color-slate-300:        #C4CDD8;
+  --color-slate-400:        #A0ADBC;
+  --color-slate-500:        #8C97A6;
+  --color-slate-600:        #677585;
+  --color-slate-700:        #475563;
+  --color-slate-800:        #2D3A44;
+  --color-slate-900:        #141D24;
+
+  /* Semantic Status */
+  --color-success:          #2A7D5F;
+  --color-success-bg:       #E8F5F0;
+  --color-warning:          #E8932A;
+  --color-warning-bg:       #FEF3E2;
+  --color-error:            #C23B2E;
+  --color-error-bg:         #FCECEA;
+  --color-info:             #2E6CB8;
+  --color-info-bg:          #E8F0FB;
+
+  /* Foreground / Text */
+  --fg-primary:             var(--color-midnight);
+  --fg-secondary:           var(--color-slate-600);
+  --fg-tertiary:            var(--color-slate-500);
+  --fg-placeholder:         var(--color-slate-400);
+  --fg-disabled:            var(--color-slate-300);
+  --fg-inverse:             #FFFFFF;
+  --fg-inverse-secondary:   rgba(255,255,255,0.65);
+  --fg-accent:              var(--color-dusk);
+  --fg-link:                var(--color-horizon);
+
+  /* Backgrounds */
+  --bg-page:                var(--color-parchment);
+  --bg-surface:             #FFFFFF;
+  --bg-surface-warm:        var(--color-sand);
+  --bg-surface-cool:        var(--color-mist);
+  --bg-raised:              #FFFFFF;
+  --bg-overlay:             rgba(11,15,26,0.5);
+  --bg-dark:                var(--color-midnight);
+  --bg-dark-surface:        var(--color-horizon);
+
+  /* Brand */
+  --brand-primary:          var(--color-horizon);
+  --brand-accent:           var(--color-dusk);
+  --brand-dark:             var(--color-midnight);
+
+  /* Borders */
+  --border-subtle:          var(--color-slate-200);
+  --border-default:         var(--color-slate-300);
+  --border-strong:          var(--color-slate-400);
+  --border-focus:           var(--color-dusk);
+  --border-dark:            rgba(255,255,255,0.1);
+
+  /* Shadows */
+  --shadow-xs:              0 1px 2px rgba(11,15,26,0.06);
+  --shadow-sm:              0 2px 8px rgba(11,15,26,0.08);
+  --shadow-md:              0 4px 16px rgba(11,15,26,0.10);
+  --shadow-lg:              0 8px 24px rgba(11,15,26,0.14);
+  --shadow-xl:              0 16px 48px rgba(11,15,26,0.18);
+
+  /* Animation */
+  --ease-default:           cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-spring:            cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:               cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-in:                cubic-bezier(0.4, 0.0, 1, 1);
+  --duration-fast:          150ms;
+  --duration-base:          250ms;
+  --duration-slow:          400ms;
 }
 
 @theme inline {
+  --font-display:           'California Sunshine', 'Georgia', serif;
   --font-sans:              'DM Sans', 'Helvetica Neue', sans-serif;
   --font-mono:              'JetBrains Mono', 'Menlo', monospace;
-  --font-serif:             'Georgia', 'Times New Roman', serif;
+  --font-serif:             'Cormorant Garamond', 'Georgia', serif;
 
   --color-background:         var(--background);
   --color-foreground:         var(--foreground);
@@ -77,10 +174,12 @@
   --color-input:              var(--input);
   --color-ring:               var(--ring);
 
-  --radius-sm:  calc(var(--radius) * 0.67);
-  --radius-md:  var(--radius);
-  --radius-lg:  calc(var(--radius) * 1.33);
-  --radius-xl:  calc(var(--radius) * 1.78);
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
 }
 
 @layer base {
@@ -99,29 +198,45 @@
 
 /* ── Away button utilities ───────────────────────────────────── */
 .btn-away-primary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   background: #D95F2B; color: #fff; border: none; border-radius: 9999px;
-  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px;
-  padding: 11px 24px; cursor: pointer; transition: background 150ms;
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px;
+  padding: 12px 24px; cursor: pointer; transition: background 150ms;
 }
 .btn-away-primary:hover:not(:disabled) { background: #B34A1C; }
-.btn-away-primary:disabled { opacity: 0.65; cursor: not-allowed; }
+.btn-away-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-away-primary-sm {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: #D95F2B; color: #fff; border: none; border-radius: 9999px;
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 13px;
+  padding: 8px 16px; cursor: pointer; transition: background 150ms;
+}
+.btn-away-primary-sm:hover:not(:disabled) { background: #B34A1C; }
+.btn-away-primary-sm:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-away-dark {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   background: #1C2E4A; color: #fff; border: none; border-radius: 9999px;
-  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px;
-  padding: 11px 24px; cursor: pointer; transition: background 150ms;
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px;
+  padding: 12px 24px; cursor: pointer; transition: background 150ms;
 }
 .btn-away-dark:hover { background: #253d61; }
 
 .btn-away-secondary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   background: #fff; color: #0B0F1A; border: 1.5px solid #C4CDD8; border-radius: 9999px;
-  font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 14px;
-  padding: 10px 22px; cursor: pointer; transition: border-color 150ms;
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 15px;
+  padding: 11px 22px; cursor: pointer; transition: border-color 150ms;
 }
 .btn-away-secondary:hover { border-color: #8C97A6; }
+
+.btn-away-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  background: transparent; color: #1C2E4A; border: none; border-radius: 9999px;
+  font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 15px;
+  padding: 12px 20px; cursor: pointer;
+}
 
 .fade-in {
   animation: fadeIn 200ms ease forwards;

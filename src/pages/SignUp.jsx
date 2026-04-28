@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import StayLoggedInModal from '@/components/StayLoggedInModal'
+import { markSessionActive } from '@/lib/sessionPersistence'
 
 const LogoMark = () => (
   <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
@@ -24,6 +26,8 @@ export default function SignUp() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showStayModal, setShowStayModal] = useState(false)
+  const [inviteRedirect, setInviteRedirect] = useState(null)
 
   if (user) return <Navigate to="/dashboard" replace />
 
@@ -42,7 +46,16 @@ export default function SignUp() {
       return
     }
     const redirect = sessionStorage.getItem('invite_redirect')
-    if (redirect) { sessionStorage.removeItem('invite_redirect'); navigate(redirect) }
+    if (redirect) sessionStorage.removeItem('invite_redirect')
+    setInviteRedirect(redirect || null)
+    setShowStayModal(true)
+    setLoading(false)
+  }
+
+  function handleStayModalDone() {
+    setShowStayModal(false)
+    markSessionActive()
+    if (inviteRedirect) navigate(inviteRedirect)
     else navigate('/dashboard')
   }
 
@@ -54,80 +67,84 @@ export default function SignUp() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F7F4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
-      {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
-        <LogoMark />
-        <span style={{ fontSize: 22, fontWeight: 600, letterSpacing: '0.14em', color: '#0B0F1A' }}>away</span>
-      </div>
+    <>
+      <div style={{ minHeight: '100vh', background: '#F9F7F4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
+          <LogoMark />
+          <span style={{ fontSize: 22, fontWeight: 600, letterSpacing: '0.14em', color: '#0B0F1A' }}>away</span>
+        </div>
 
-      {/* Card */}
-      <div style={{ width: '100%', maxWidth: 400, background: '#fff', borderRadius: 20, padding: '36px 36px 32px', boxShadow: '0 4px 24px rgba(11,15,26,0.10)' }}>
-        <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 6 }}>Create an account</h1>
-        <p style={{ fontSize: 14, color: '#677585', marginBottom: 28 }}>Plan your next trip with friends</p>
+        {/* Card */}
+        <div style={{ width: '100%', maxWidth: 400, background: '#fff', borderRadius: 20, padding: '36px 36px 32px', boxShadow: '0 4px 24px rgba(11,15,26,0.10)' }}>
+          <h1 style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 6 }}>Create an account</h1>
+          <p style={{ fontSize: 14, color: '#677585', marginBottom: 28 }}>Plan your next trip with friends</p>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#677585', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6 }}>Your name</label>
-            <input
-              type="text"
-              placeholder="Jane Smith"
-              value={displayName}
-              onChange={e => setDisplayName(e.target.value)}
-              required
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#D95F2B'}
-              onBlur={e => e.target.style.borderColor = '#C4CDD8'}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#677585', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6 }}>Email</label>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#D95F2B'}
-              onBlur={e => e.target.style.borderColor = '#C4CDD8'}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#677585', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6 }}>Password</label>
-            <input
-              type="password"
-              placeholder="At least 6 characters"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              style={inputStyle}
-              onFocus={e => e.target.style.borderColor = '#D95F2B'}
-              onBlur={e => e.target.style.borderColor = '#C4CDD8'}
-            />
-          </div>
-
-          {error && (
-            <div style={{ background: '#FCECEA', border: '1px solid #F5B8B4', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C23B2E' }}>
-              {error}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#677585', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6 }}>Your name</label>
+              <input
+                type="text"
+                placeholder="Jane Smith"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                required
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = '#D95F2B'}
+                onBlur={e => e.target.style.borderColor = '#C4CDD8'}
+              />
             </div>
-          )}
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#677585', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6 }}>Email</label>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = '#D95F2B'}
+                onBlur={e => e.target.style.borderColor = '#C4CDD8'}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#677585', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6 }}>Password</label>
+              <input
+                type="password"
+                placeholder="At least 6 characters"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = '#D95F2B'}
+                onBlur={e => e.target.style.borderColor = '#C4CDD8'}
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-away-primary"
-            style={{ width: '100%', marginTop: 4, opacity: loading ? 0.7 : 1, fontSize: 15, padding: '13px 24px' }}
-          >
-            {loading ? 'Creating account…' : 'Create account'}
-          </button>
-        </form>
+            {error && (
+              <div style={{ background: '#FCECEA', border: '1px solid #F5B8B4', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#C23B2E' }}>
+                {error}
+              </div>
+            )}
 
-        <p style={{ marginTop: 24, textAlign: 'center', fontSize: 14, color: '#677585' }}>
-          Already have an account?{' '}
-          <Link to="/login" style={{ color: '#D95F2B', fontWeight: 500 }}>Log in</Link>
-        </p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-away-primary"
+              style={{ width: '100%', marginTop: 4, opacity: loading ? 0.7 : 1, fontSize: 15, padding: '13px 24px' }}
+            >
+              {loading ? 'Creating account…' : 'Create account'}
+            </button>
+          </form>
+
+          <p style={{ marginTop: 24, textAlign: 'center', fontSize: 14, color: '#677585' }}>
+            Already have an account?{' '}
+            <Link to="/login" style={{ color: '#D95F2B', fontWeight: 500 }}>Log in</Link>
+          </p>
+        </div>
       </div>
-    </div>
+
+      {showStayModal && <StayLoggedInModal onDone={handleStayModalDone} />}
+    </>
   )
 }

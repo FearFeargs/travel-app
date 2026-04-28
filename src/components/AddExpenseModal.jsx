@@ -110,7 +110,7 @@ export default function AddExpenseModal({ open, onClose, tripId, userId, onAdded
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent style={{ borderRadius: 20, padding: '32px', maxWidth: 480, maxHeight: 'calc(90vh - 62px)', overflowY: 'auto', top: 'calc(50% + 31px)' }}>
         <DialogHeader>
-          <DialogTitle style={{ fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 400, color: '#0B0F1A' }}>
+          <DialogTitle style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, fontWeight: 400, color: '#0B0F1A' }}>
             {isEdit ? 'Edit expense' : 'Add expense'}
           </DialogTitle>
         </DialogHeader>

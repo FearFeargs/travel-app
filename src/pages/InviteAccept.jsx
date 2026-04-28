@@ -60,28 +60,28 @@ export default function InviteAccept() {
 
   if (status === 'expired') return card(<>
     <div style={{ fontSize: 36, marginBottom: 12 }}>⏰</div>
-    <div style={{ fontFamily: 'Georgia, serif', fontSize: 22, color: '#0B0F1A', marginBottom: 8 }}>Invite expired</div>
+    <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 22, color: '#0B0F1A', marginBottom: 8 }}>Invite expired</div>
     <p style={{ fontSize: 14, color: '#677585', marginBottom: 24 }}>This invite link has expired. Ask the trip owner to send a new one.</p>
     <button className="btn-away-secondary" onClick={() => navigate('/dashboard')}>Go to dashboard</button>
   </>)
 
   if (status === 'error') return card(<>
     <div style={{ fontSize: 36, marginBottom: 12 }}>✕</div>
-    <div style={{ fontFamily: 'Georgia, serif', fontSize: 22, color: '#0B0F1A', marginBottom: 8 }}>Can't open invite</div>
+    <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 22, color: '#0B0F1A', marginBottom: 8 }}>Can't open invite</div>
     <p style={{ fontSize: 14, color: '#677585', marginBottom: 24 }}>{errorMsg}</p>
     <button className="btn-away-secondary" onClick={() => navigate('/dashboard')}>Go to dashboard</button>
   </>)
 
   if (status === 'accepted') return card(<>
     <div style={{ fontSize: 36, marginBottom: 12 }}>✓</div>
-    <div style={{ fontFamily: 'Georgia, serif', fontSize: 22, color: '#0B0F1A', marginBottom: 8 }}>You're in!</div>
+    <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 22, color: '#0B0F1A', marginBottom: 8 }}>You're in!</div>
     <p style={{ fontSize: 14, color: '#677585' }}>Taking you to <strong>{invite?.trip_title}</strong>…</p>
   </>)
 
   // status === 'ready' | 'accepting'
   return card(<>
     <div style={{ fontSize: 36, marginBottom: 16 }}>✈</div>
-    <div style={{ fontFamily: 'Georgia, serif', fontSize: 26, color: '#0B0F1A', marginBottom: 6 }}>
+    <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 26, color: '#0B0F1A', marginBottom: 6 }}>
       {invite?.trip_title}
     </div>
     <p style={{ fontSize: 14, color: '#677585', marginBottom: 4 }}>

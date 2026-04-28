@@ -21,12 +21,13 @@ export default function NavBar({ displayName, onNewTrip }) {
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate('/')
   }
 
   const navLinks = [
     { label: 'My Trips', path: '/dashboard' },
     { label: 'Profile',  path: '/profile' },
+    { label: 'Settings', path: '/settings' },
   ]
 
   return (

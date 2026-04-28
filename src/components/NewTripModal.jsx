@@ -63,7 +63,7 @@ export default function NewTripModal({ open, onClose }) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent style={{ borderRadius: 20, padding: '32px', maxWidth: 480 }}>
         <DialogHeader>
-          <DialogTitle style={{ fontFamily: 'Georgia, serif', fontSize: 24, fontWeight: 400, color: '#0B0F1A' }}>
+          <DialogTitle style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 24, fontWeight: 400, color: '#0B0F1A' }}>
             Plan a new trip
           </DialogTitle>
         </DialogHeader>
