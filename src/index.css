@@ -1,14 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Cormorant+Garamond:wght@400;500&display=swap');
-
-@font-face {
-  font-family: 'California Sunshine';
-  src: url('/fonts/CaliforniaSunshine-Alternate.otf') format('opentype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Cormorant+Garamond:wght@400;500&family=Josefin+Sans:wght@200;300;400&display=swap');
 
 /* shadcn/tailwind.css inlined (package path not exported) */
 @theme inline {
@@ -150,7 +142,7 @@
 }
 
 @theme inline {
-  --font-display:           'California Sunshine', 'Georgia', serif;
+  --font-display:           'Josefin Sans', sans-serif;
   --font-sans:              'DM Sans', 'Helvetica Neue', sans-serif;
   --font-mono:              'JetBrains Mono', 'Menlo', monospace;
   --font-serif:             'Cormorant Garamond', 'Georgia', serif;

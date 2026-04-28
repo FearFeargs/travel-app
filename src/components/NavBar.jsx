@@ -1,20 +1,34 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 
-const LogoMark = ({ size = 26 }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-    <circle cx="20" cy="20" r="18.25" stroke="#1C2E4A" strokeWidth="1.5"/>
-    <line x1="20" y1="3" x2="20" y2="9" stroke="#C4CDD8" strokeWidth="1" strokeLinecap="round"/>
-    <line x1="20" y1="31" x2="20" y2="37" stroke="#C4CDD8" strokeWidth="1" strokeLinecap="round"/>
-    <line x1="3" y1="20" x2="9" y2="20" stroke="#C4CDD8" strokeWidth="1" strokeLinecap="round"/>
-    <line x1="31" y1="20" x2="37" y2="20" stroke="#C4CDD8" strokeWidth="1" strokeLinecap="round"/>
-    <polygon points="20,8 22.4,20 20,18.5 17.6,20" fill="#D95F2B"/>
-    <polygon points="20,32 22.4,20 20,21.5 17.6,20" fill="#C4CDD8"/>
-    <circle cx="20" cy="20" r="1.8" fill="#1C2E4A"/>
+// Compass needle mark — pure diamond, no ring
+const LogoMark = ({ size = 26, dark = false }) => (
+  <svg width={size} height={size * 1.25} viewBox="0 0 32 40" fill="none">
+    <polygon points="16,2 20,20 16,17 12,20" fill="#D95F2B"/>
+    <polygon points="16,38 20,20 16,23 12,20" fill={dark ? 'rgba(255,255,255,0.25)' : '#1C2E4A'} opacity={dark ? 1 : 0.35}/>
+    <circle cx="16" cy="20" r="2.2" fill={dark ? 'rgba(255,255,255,0.9)' : '#1C2E4A'}/>
+    <circle cx="16" cy="20" r="1" fill={dark ? '#1C2E4A' : '#F9F7F4'}/>
   </svg>
 )
 
-export default function NavBar({ displayName, onNewTrip }) {
+// Wordmark — Josefin Sans 300, uppercase, mirrored W
+const Wordmark = ({ size = 15, dark = false }) => (
+  <span style={{
+    fontFamily: "'Josefin Sans', sans-serif",
+    fontSize: size, fontWeight: 300,
+    textTransform: 'uppercase',
+    color: dark ? '#fff' : '#0B0F1A',
+    display: 'inline-flex', alignItems: 'center', gap: '0.18em',
+    letterSpacing: 0,
+  }}>
+    <span>a</span>
+    <span style={{ display: 'inline-block', transform: 'scaleX(-1)', minWidth: '0.8em', overflow: 'visible', textAlign: 'center' }}>w</span>
+    <span>a</span>
+    <span>y</span>
+  </span>
+)
+
+export default function NavBar({ displayName, onNewTrip, dark = false }) {
   const navigate = useNavigate()
   const location = useLocation()
   const initial = displayName ? displayName.charAt(0).toUpperCase() : '?'
@@ -30,22 +44,27 @@ export default function NavBar({ displayName, onNewTrip }) {
     { label: 'Settings', path: '/settings' },
   ]
 
+  const bg    = dark ? 'rgba(11,15,26,0.45)' : 'rgba(249,247,244,0.92)'
+  const border = dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E4E9EF'
+  const fg    = dark ? 'rgba(255,255,255,0.65)' : '#677585'
+  const activeFg = dark ? '#fff' : '#0B0F1A'
+
   return (
     <header style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
       height: 62, display: 'flex', alignItems: 'center',
       padding: '0 40px',
-      background: 'rgba(249,247,244,0.92)',
+      background: bg,
       backdropFilter: 'blur(20px)',
-      borderBottom: '1px solid #E4E9EF',
+      borderBottom: border,
     }}>
       {/* Logo */}
       <div
         onClick={() => navigate('/dashboard')}
         style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', marginRight: 36 }}
       >
-        <LogoMark size={26} />
-        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 600, letterSpacing: '0.18em', color: '#0B0F1A' }}>away</span>
+        <LogoMark size={22} dark={dark} />
+        <Wordmark size={15} dark={dark} />
       </div>
 
       {/* Nav links */}
@@ -57,7 +76,7 @@ export default function NavBar({ displayName, onNewTrip }) {
               background: 'none', border: 'none', cursor: 'pointer',
               padding: '8px 16px', borderRadius: 8,
               fontSize: 14, fontWeight: active ? 600 : 400,
-              color: active ? '#0B0F1A' : '#677585',
+              color: active ? activeFg : fg,
               borderBottom: active ? '2px solid #D95F2B' : '2px solid transparent',
               fontFamily: 'DM Sans, sans-serif', transition: 'all 150ms',
             }}>{link.label}</button>
@@ -66,22 +85,52 @@ export default function NavBar({ displayName, onNewTrip }) {
       </nav>
 
       {/* Right actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {/* Search icon */}
+        <button onClick={() => navigate('/dashboard')} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          width: 36, height: 36, borderRadius: 8,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: fg, transition: 'all 150ms',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.08)' : '#F4F6F8'; e.currentTarget.style.color = activeFg; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = fg; }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 18, background: dark ? 'rgba(255,255,255,0.15)' : '#E4E9EF', margin: '0 4px' }} />
+
+        {/* New trip — outlined pill */}
         {onNewTrip && (
-          <button className="btn-away-primary" style={{ fontSize: 13, padding: '8px 18px' }} onClick={onNewTrip}>
-            + New trip
+          <button onClick={onNewTrip} style={{
+            background: 'none',
+            border: `1.5px solid ${dark ? 'rgba(255,255,255,0.3)' : '#C4CDD8'}`,
+            borderRadius: 9999, padding: '7px 16px',
+            fontSize: 13, fontWeight: 600, fontFamily: 'DM Sans, sans-serif',
+            color: dark ? '#fff' : '#0B0F1A',
+            cursor: 'pointer', transition: 'all 150ms',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = dark ? 'rgba(255,255,255,0.65)' : '#8C97A6'; e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.07)' : '#F4F6F8'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = dark ? 'rgba(255,255,255,0.3)' : '#C4CDD8'; e.currentTarget.style.background = 'none'; }}>
+            <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> New trip
           </button>
         )}
+
+        {/* Avatar */}
         <button
           onClick={() => navigate('/profile')}
-          title="Profile & settings"
+          title={displayName || 'Profile'}
           style={{
-            width: 34, height: 34, borderRadius: '50%',
+            width: 32, height: 32, borderRadius: '50%',
             background: '#D95F2B', color: '#fff',
-            fontWeight: 600, fontSize: 14,
+            fontWeight: 600, fontSize: 13,
             border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'DM Sans, sans-serif',
+            fontFamily: 'DM Sans, sans-serif', marginLeft: 4,
           }}
         >{initial}</button>
       </div>

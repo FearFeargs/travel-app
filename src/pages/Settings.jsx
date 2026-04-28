@@ -29,7 +29,7 @@ export default function Settings() {
       <div style={{ paddingTop: 62, minHeight: '100vh', background: '#F9F7F4' }}>
         <div style={{ maxWidth: 620, margin: '0 auto', padding: '48px 24px' }}>
 
-          <h1 style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 38, fontWeight: 400, color: '#0B0F1A', marginBottom: 6 }}>Settings</h1>
+          <h1 style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 38, fontWeight: 400, color: '#0B0F1A', marginBottom: 6 }}>Settings</h1>
           <p style={{ fontSize: 14, color: '#677585', marginBottom: 40 }}>Manage your account preferences.</p>
 
           {/* Session section */}

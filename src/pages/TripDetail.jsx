@@ -390,7 +390,7 @@ export default function TripDetail() {
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 40px 32px' }}>
           <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 52, fontWeight: 400, color: '#fff', lineHeight: 1.1 }}>{trip.title}</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 52, fontWeight: 400, color: '#fff', lineHeight: 1.1 }}>{trip.title}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 10 }}>
                 <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.04em' }}>
                   {formatDateLong(trip.start_date)} → {formatDateLong(trip.end_date)} · {nights} {nights === 1 ? 'night' : 'nights'}

@@ -30,7 +30,7 @@ export default function StayLoggedInModal({ onDone }) {
           marginBottom: 20, fontSize: 22,
         }}>🔒</div>
 
-        <h2 style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 26, fontWeight: 400, color: '#0B0F1A', lineHeight: 1.2, marginBottom: 10 }}>
+        <h2 style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 26, fontWeight: 400, color: '#0B0F1A', lineHeight: 1.2, marginBottom: 10 }}>
           Stay logged in?
         </h2>
         <p style={{ fontSize: 14, color: '#677585', lineHeight: 1.6, marginBottom: 28 }}>

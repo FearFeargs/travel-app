@@ -5,15 +5,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { markSessionActive } from '@/lib/sessionPersistence'
 
 const LogoMark = () => (
-  <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
-    <circle cx="20" cy="20" r="18.25" stroke="#1C2E4A" strokeWidth="1.5"/>
-    <line x1="20" y1="3" x2="20" y2="9" stroke="#C4CDD8" strokeWidth="1" strokeLinecap="round"/>
-    <line x1="20" y1="31" x2="20" y2="37" stroke="#C4CDD8" strokeWidth="1" strokeLinecap="round"/>
-    <line x1="3" y1="20" x2="9" y2="20" stroke="#C4CDD8" strokeWidth="1" strokeLinecap="round"/>
-    <line x1="31" y1="20" x2="37" y2="20" stroke="#C4CDD8" strokeWidth="1" strokeLinecap="round"/>
-    <polygon points="20,8 22.4,20 20,18.5 17.6,20" fill="#D95F2B"/>
-    <polygon points="20,32 22.4,20 20,21.5 17.6,20" fill="#C4CDD8"/>
-    <circle cx="20" cy="20" r="1.8" fill="#1C2E4A"/>
+  <svg width="28" height="35" viewBox="0 0 32 40" fill="none">
+    <polygon points="16,2 20,20 16,17 12,20" fill="#D95F2B"/>
+    <polygon points="16,38 20,20 16,23 12,20" fill="#1C2E4A" opacity="0.35"/>
+    <circle cx="16" cy="20" r="2.2" fill="#1C2E4A"/>
+    <circle cx="16" cy="20" r="1" fill="#F9F7F4"/>
   </svg>
 )
 
@@ -48,12 +44,14 @@ export default function Login() {
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
         <LogoMark />
-        <span style={{ fontSize: 22, fontWeight: 600, letterSpacing: '0.14em', color: '#0B0F1A' }}>away</span>
+        <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 16, fontWeight: 300, textTransform: 'uppercase', color: '#0B0F1A', display: 'inline-flex', alignItems: 'center', gap: '0.18em' }}>
+          <span>a</span><span style={{ display: 'inline-block', transform: 'scaleX(-1)', minWidth: '0.8em', textAlign: 'center' }}>w</span><span>a</span><span>y</span>
+        </span>
       </div>
 
       {/* Card */}
       <div style={{ width: '100%', maxWidth: 400, background: '#fff', borderRadius: 20, padding: '36px 36px 32px', boxShadow: '0 4px 24px rgba(11,15,26,0.10)' }}>
-        <h1 style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 6 }}>Welcome back</h1>
+        <h1 style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 6 }}>Welcome back</h1>
         <p style={{ fontSize: 14, color: '#677585', marginBottom: 28 }}>Log in to your account</p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

@@ -126,7 +126,7 @@ function DashboardHero({ displayName, coverUrl, onCoverChange, onNewTrip }) {
 
       {/* Content */}
       <div style={{ position: 'relative', maxWidth: 1200, margin: '0 auto', padding: '56px 40px 64px' }}>
-        <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 48, fontWeight: 400, color: textColor, lineHeight: 1.1, marginBottom: 10 }}>
+        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 48, fontWeight: 400, color: textColor, lineHeight: 1.1, marginBottom: 10 }}>
           {displayName ? `Good to see you, ${displayName.split(' ')[0]}.` : 'Your trips.'}
         </div>
         <p style={{ fontSize: 16, color: subColor, marginBottom: 28 }}>Everything in one place.</p>
@@ -209,7 +209,7 @@ export default function Dashboard() {
           <div style={{ color: '#8C97A6', fontSize: 15 }}>Loading…</div>
         ) : trips.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '64px 24px' }}>
-            <div style={{ fontFamily: "'California Sunshine', Georgia, serif", fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 10 }}>Where to next?</div>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 28, fontWeight: 400, color: '#0B0F1A', marginBottom: 10 }}>Where to next?</div>
             <p style={{ fontSize: 15, color: '#677585', marginBottom: 28 }}>Your trips will appear here once you create one.</p>
             <button className="btn-away-primary" onClick={() => setModalOpen(true)}>Plan a trip</button>
           </div>
