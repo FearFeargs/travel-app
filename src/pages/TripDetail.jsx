@@ -119,9 +119,45 @@ function ItemCard({ item, onClick }) {
   )
 }
 
+// ── Balance calculator ───────────────────────────────────────────
+
+function calcSettlements(expenses, allSplits, members) {
+  // debt[debtorId][creditorId] = amount debtor owes creditor
+  const debt = {}
+  for (const exp of expenses) {
+    const payerId = exp.paid_by_user_id
+    if (!payerId) continue
+    for (const split of allSplits.filter(s => s.expense_id === exp.id)) {
+      if (split.user_id === payerId) continue
+      const d = split.user_id
+      if (!debt[d]) debt[d] = {}
+      debt[d][payerId] = (debt[d][payerId] || 0) + parseFloat(split.share_amount)
+    }
+  }
+  const settlements = []
+  const seen = new Set()
+  for (const [debtorId, creditors] of Object.entries(debt)) {
+    for (const [creditorId] of Object.entries(creditors)) {
+      const key = [debtorId, creditorId].sort().join('|')
+      if (seen.has(key)) continue
+      seen.add(key)
+      const ab = debt[debtorId]?.[creditorId] || 0
+      const ba = debt[creditorId]?.[debtorId] || 0
+      const net = ab - ba
+      if (Math.abs(net) < 0.005) continue
+      const fromId = net > 0 ? debtorId : creditorId
+      const toId   = net > 0 ? creditorId : debtorId
+      const from   = members.find(m => m.user_id === fromId)
+      const to     = members.find(m => m.user_id === toId)
+      if (from && to) settlements.push({ from, to, amount: Math.abs(net) })
+    }
+  }
+  return settlements.sort((a, b) => b.amount - a.amount)
+}
+
 // ── Expense card ─────────────────────────────────────────────────
 
-function ExpenseCard({ expense, onClick }) {
+function ExpenseCard({ expense, onClick, payerName, splitCount }) {
   const [hover, setHover] = useState(false)
   return (
     <div
@@ -143,7 +179,9 @@ function ExpenseCard({ expense, onClick }) {
           {expense.description}
         </div>
         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#8C97A6', marginTop: 3 }}>
-          {formatExpenseDate(expense.expense_date)} · Paid by you
+          {formatExpenseDate(expense.expense_date)}
+          {payerName && <> · <span style={{ color: '#677585' }}>Paid by {payerName}</span></>}
+          {splitCount > 1 && <span style={{ color: '#A0ADBC' }}> · {splitCount} ways</span>}
         </div>
         {expense.notes && (
           <div style={{ fontSize: 12, color: '#A0ADBC', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -190,6 +228,8 @@ export default function TripDetail() {
   const [coverUploadError, setCoverUploadError] = useState(null)
   const coverFileRef  = useRef(null)
   const heroIsDark    = useImageBrightness(trip?.cover_image_url)
+  const [members, setMembers]               = useState([])
+  const [allSplits, setAllSplits]           = useState([])
   const [invites, setInvites]               = useState([])
   const [inviteEmail, setInviteEmail]       = useState('')
   const [inviteRole, setInviteRole]         = useState('editor')
@@ -216,7 +256,26 @@ export default function TripDetail() {
       .select('*')
       .eq('trip_id', id)
       .order('expense_date', { ascending: true })
-    if (data) setExpenses(data)
+    if (data) {
+      setExpenses(data)
+      if (data.length > 0) {
+        const expIds = data.map(e => e.id)
+        const { data: splits } = await supabase
+          .from('expense_splits').select('*').in('expense_id', expIds)
+        if (splits) setAllSplits(splits)
+      } else {
+        setAllSplits([])
+      }
+    }
+  }, [id])
+
+  const loadMembers = useCallback(async () => {
+    if (!id) return
+    const { data } = await supabase
+      .from('trip_members')
+      .select('user_id, role, joined_at, users(display_name, avatar_url)')
+      .eq('trip_id', id)
+    if (data) setMembers(data)
   }, [id])
 
   const loadInvites = useCallback(async () => {
@@ -261,7 +320,8 @@ export default function TripDetail() {
     loadExpenses()
     loadCommentPreview()
     loadInvites()
-  }, [id, user, loadItems, loadExpenses, loadCommentPreview, loadInvites])
+    loadMembers()
+  }, [id, user, loadItems, loadExpenses, loadCommentPreview, loadInvites, loadMembers])
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#F9F7F4' }}>
@@ -577,9 +637,17 @@ export default function TripDetail() {
                 {expenses.length === 0 && (
                   <div style={{ color: '#A0ADBC', fontSize: 14, padding: '8px 0' }}>No expenses recorded yet.</div>
                 )}
-                {expenses.map(expense => (
-                  <ExpenseCard key={expense.id} expense={expense} onClick={() => setEditingExpense(expense)} />
-                ))}
+                {expenses.map(expense => {
+                  const payer      = members.find(m => m.user_id === expense.paid_by_user_id)
+                  const payerName  = payer?.users?.display_name || (expense.paid_by_user_id === user?.id ? 'You' : null)
+                  const splitCount = allSplits.filter(s => s.expense_id === expense.id).length
+                  return (
+                    <ExpenseCard key={expense.id} expense={expense}
+                      onClick={() => setEditingExpense(expense)}
+                      payerName={payerName}
+                      splitCount={splitCount} />
+                  )
+                })}
                 <button
                   onClick={() => setExpenseModal(true)}
                   style={{
@@ -594,6 +662,47 @@ export default function TripDetail() {
                   <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Add expense
                 </button>
               </div>
+
+              {/* Balances */}
+              {(() => {
+                if (members.length < 2 || expenses.length === 0) return null
+                const settlements = calcSettlements(expenses, allSplits, members)
+                if (settlements.length === 0) {
+                  return (
+                    <div style={{ marginTop: 32, padding: '20px 24px', background: '#E8F5F0', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 20 }}>✓</span>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#2A7D5F' }}>All settled up</div>
+                        <div style={{ fontSize: 12, color: '#4A9B7F', marginTop: 2 }}>No outstanding balances.</div>
+                      </div>
+                    </div>
+                  )
+                }
+                return (
+                  <div style={{ marginTop: 32 }}>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 600, color: '#8C97A6', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>
+                      Balances
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {settlements.map((s, i) => (
+                        <div key={i} style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(11,15,26,0.07)' }}>
+                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#D95F2B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                            {(s.from.users?.display_name || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, fontSize: 14, color: '#0B0F1A' }}>
+                            <span style={{ fontWeight: 600 }}>{s.from.users?.display_name || 'Unknown'}</span>
+                            <span style={{ color: '#8C97A6' }}> owes </span>
+                            <span style={{ fontWeight: 600 }}>{s.to.users?.display_name || 'Unknown'}</span>
+                          </div>
+                          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 700, color: '#C23B2E' }}>
+                            ${fmtMoney(s.amount, 2)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>
@@ -858,7 +967,38 @@ export default function TripDetail() {
 
           {/* Travelers / invites card */}
           <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', boxShadow: '0 2px 8px rgba(11,15,26,0.07)' }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F1A', marginBottom: 14 }}>Travelers</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F1A' }}>Travelers</div>
+              {members.length > 0 && (
+                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#8C97A6' }}>{members.length}</span>
+              )}
+            </div>
+
+            {/* Accepted members roster */}
+            {members.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                {members.map(m => {
+                  const name    = m.users?.display_name || 'Unknown'
+                  const isMe    = m.user_id === user?.id
+                  const roleMap = { owner: 'Owner', editor: 'Editor', viewer: 'Viewer' }
+                  return (
+                    <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: '#F9F7F4' }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#D95F2B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: '#0B0F1A' }}>
+                          {name}{isMe && <span style={{ color: '#8C97A6', fontWeight: 400 }}> (you)</span>}
+                        </div>
+                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: '#8C97A6', marginTop: 1 }}>
+                          {roleMap[m.role] || m.role}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             {isOwner && (
               <form onSubmit={sendInvite} style={{ marginBottom: 16 }}>
@@ -970,6 +1110,7 @@ export default function TripDetail() {
         userId={user?.id}
         onAdded={loadExpenses}
         expense={editingExpense}
+        members={members}
       />
 
       {/* Delete trip modal */}
