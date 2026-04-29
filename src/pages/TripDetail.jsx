@@ -353,7 +353,11 @@ export default function TripDetail() {
         })
     : []
 
-  const plannedTotal = items.reduce((sum, i) => sum + (parseFloat(i.cost_amount) || 0), 0)
+  const confirmedItems  = dayItems.filter(i => !i.is_proposal)
+  const proposalItems   = items.filter(i => i.is_proposal)  // all days
+  const dayProposals    = dayItems.filter(i => i.is_proposal)
+
+  const plannedTotal = items.filter(i => !i.is_proposal).reduce((sum, i) => sum + (parseFloat(i.cost_amount) || 0), 0)
   const spentTotal   = expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
   const totalUsed    = plannedTotal + spentTotal
   const budget       = parseFloat(trip?.budget_amount) || 0
@@ -408,6 +412,16 @@ export default function TripDetail() {
     setInviteEmail('')
     await loadInvites()
     setInviteSending(false)
+  }
+
+  async function approveProposal(itemId) {
+    await supabase.from('items').update({ is_proposal: false }).eq('id', itemId)
+    loadItems()
+  }
+
+  async function dismissProposal(itemId) {
+    await supabase.from('items').delete().eq('id', itemId)
+    loadItems()
   }
 
   async function handleAddDay() {
@@ -602,10 +616,10 @@ export default function TripDetail() {
                     </div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {dayItems.length === 0 && (
+                    {confirmedItems.length === 0 && dayProposals.length === 0 && (
                       <div style={{ color: '#A0ADBC', fontSize: 14, padding: '8px 0' }}>Nothing planned yet.</div>
                     )}
-                    {dayItems.map(item => (
+                    {confirmedItems.map(item => (
                       <ItemCard key={item.id} item={item} onClick={() => setEditingItem(item)} />
                     ))}
                     <button
@@ -622,6 +636,88 @@ export default function TripDetail() {
                       <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> Add activity
                     </button>
                   </div>
+
+                  {/* Proposals for this day */}
+                  {dayProposals.length > 0 && (
+                    <div style={{ marginTop: 28 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 600, color: '#D95F2B', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                          Proposals
+                        </div>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 9999, fontSize: 11, fontWeight: 700, padding: '2px 8px', background: '#FEF5F0', color: '#D95F2B' }}>
+                          {dayProposals.length}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {dayProposals.map(item => {
+                          const cfg = TYPE_CONFIG[item.item_type] || TYPE_CONFIG.other
+                          const timeStr = formatTime(item.start_time)
+                          const subtitle = [timeStr, item.location_name].filter(Boolean).join(' · ')
+                          return (
+                            <div key={item.id} style={{
+                              background: '#fff', borderRadius: 14, padding: '14px 16px',
+                              border: '1.5px dashed #F5C4A8',
+                              display: 'flex', alignItems: 'center', gap: 12,
+                              boxShadow: '0 2px 8px rgba(11,15,26,0.06)',
+                            }}>
+                              <div style={{ width: 40, height: 40, borderRadius: 10, background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0, opacity: 0.75 }}>
+                                {cfg.icon}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: '#475563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {item.title}
+                                </div>
+                                {subtitle && (
+                                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#A0ADBC', marginTop: 2 }}>{subtitle}</div>
+                                )}
+                              </div>
+                              {item.cost_amount != null && (
+                                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 14, fontWeight: 600, color: '#8C97A6', flexShrink: 0 }}>
+                                  ${fmtMoney(item.cost_amount)}
+                                </div>
+                              )}
+                              {/* Actions */}
+                              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                <button
+                                  onClick={() => approveProposal(item.id)}
+                                  title="Approve"
+                                  style={{
+                                    width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
+                                    background: '#E8F5F0', color: '#2A7D5F', fontSize: 15, fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms',
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = '#2A7D5F'; e.currentTarget.style.color = '#fff' }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = '#E8F5F0'; e.currentTarget.style.color = '#2A7D5F' }}
+                                >✓</button>
+                                <button
+                                  onClick={() => setEditingItem(item)}
+                                  title="Edit"
+                                  style={{
+                                    width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
+                                    background: '#F4F6F8', color: '#677585', fontSize: 13,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms',
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = '#E4E9EF'; e.currentTarget.style.color = '#0B0F1A' }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = '#F4F6F8'; e.currentTarget.style.color = '#677585' }}
+                                >✎</button>
+                                <button
+                                  onClick={() => dismissProposal(item.id)}
+                                  title="Dismiss"
+                                  style={{
+                                    width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
+                                    background: '#F4F6F8', color: '#A0ADBC', fontSize: 16,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms',
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = '#FCECEA'; e.currentTarget.style.color = '#C23B2E' }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = '#F4F6F8'; e.currentTarget.style.color = '#A0ADBC' }}
+                                >×</button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             )

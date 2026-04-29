@@ -87,6 +87,7 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
   const [cost, setCost]           = useState('')
   const [currency, setCurrency]   = useState('USD')
   const [url, setUrl]             = useState('')
+  const [isProposal, setIsProposal] = useState(false)
   const [error, setError]         = useState(null)
   const [loading, setLoading]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -102,6 +103,7 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
       setCost(item.cost_amount != null ? String(item.cost_amount) : '')
       setCurrency(item.cost_currency || 'USD')
       setUrl(item.url || '')
+      setIsProposal(item.is_proposal || false)
       setError(null)
       setConfirmDelete(false)
     } else {
@@ -112,7 +114,7 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
   function reset() {
     setTitle(''); setItemType('activity'); setStartTime(''); setEndTime('')
     setLocation(''); setNotes(''); setCost(''); setCurrency('USD')
-    setUrl(''); setError(null); setConfirmDelete(false); setLoading(false)
+    setUrl(''); setIsProposal(false); setError(null); setConfirmDelete(false); setLoading(false)
   }
 
   function handleClose() {
@@ -163,6 +165,7 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
         day_id:             day.id,
         order_index:        nextIndex,
         created_by_user_id: userId,
+        is_proposal:        isProposal,
       })
       if (insertError) { setError(insertError.message); setLoading(false); return }
     }
@@ -292,6 +295,55 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
               onFocus={focusDusk} onBlur={blurSlate} />
           </div>
 
+          {/* Proposal toggle — new items only */}
+          {!isEdit && (
+            <button
+              type="button"
+              onClick={() => setIsProposal(p => !p)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
+                border: `1.5px solid ${isProposal ? '#D95F2B' : '#E4E9EF'}`,
+                background: isProposal ? '#FEF5F0' : '#F9F7F4',
+                transition: 'all 150ms', textAlign: 'left',
+              }}
+            >
+              {/* Toggle pill */}
+              <div style={{
+                width: 36, height: 20, borderRadius: 10, flexShrink: 0,
+                background: isProposal ? '#D95F2B' : '#C4CDD8',
+                position: 'relative', transition: 'background 200ms',
+              }}>
+                <span style={{
+                  position: 'absolute', top: 2,
+                  left: isProposal ? 18 : 2,
+                  width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                  boxShadow: '0 1px 3px rgba(11,15,26,0.2)',
+                  transition: 'left 200ms', display: 'block',
+                }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: isProposal ? '#D95F2B' : '#475563' }}>
+                  {isProposal ? 'Adding as proposal' : 'Add as proposal'}
+                </div>
+                <div style={{ fontSize: 12, color: '#8C97A6', marginTop: 1 }}>
+                  {isProposal ? 'Group can approve or dismiss this suggestion.' : 'Suggest to the group before committing.'}
+                </div>
+              </div>
+            </button>
+          )}
+
+          {/* Proposal banner — edit mode */}
+          {isEdit && item?.is_proposal && (
+            <div style={{ background: '#FEF5F0', border: '1.5px solid #F5C4A8', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16 }}>💡</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#D95F2B' }}>This is a proposal</div>
+                <div style={{ fontSize: 12, color: '#C47A40', marginTop: 1 }}>Approve it to add it to the confirmed itinerary.</div>
+              </div>
+            </div>
+          )}
+
           {/* Item-level comments (edit mode only) */}
           {isEdit && item && (
             <div style={{ borderTop: '1px solid #F4F6F8', paddingTop: 20, marginTop: 4 }}>
@@ -335,7 +387,11 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="btn-away-secondary" onClick={handleClose} disabled={loading}>Cancel</button>
               <button type="submit" className="btn-away-primary" disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
-                {loading ? (isEdit ? 'Saving…' : 'Adding…') : (isEdit ? 'Save changes' : 'Add to itinerary')}
+                {loading
+                  ? (isEdit ? 'Saving…' : 'Adding…')
+                  : isEdit
+                    ? 'Save changes'
+                    : isProposal ? 'Submit proposal' : 'Add to itinerary'}
               </button>
             </div>
           </div>
