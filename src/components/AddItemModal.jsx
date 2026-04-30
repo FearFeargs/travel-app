@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import CommentThread from './CommentThread'
+import { getGoogleMapsLoader } from '@/lib/googleMaps'
+import { canCallPlaces, recordPlacesCall } from '@/lib/mapUsage'
 
 const TYPES = [
   { value: 'flight',    label: 'Flight',    color: '#EBF0F7' },
@@ -95,7 +97,9 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
   const [error, setError]         = useState(null)
   const [loading, setLoading]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const geoDebounce = useRef(null)
+  const geoDebounce      = useRef(null)
+  const googleRef        = useRef(null)   // google maps API object
+  const placesServiceDiv = useRef(null)   // dummy div required by PlacesService
 
   useEffect(() => {
     if (item) {
@@ -119,6 +123,12 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
     }
   }, [item, open])
 
+  // Preload Google Maps so the Places API is ready before the user types
+  useEffect(() => {
+    if (!import.meta.env.VITE_GOOGLE_MAPS_KEY) return
+    getGoogleMapsLoader().load().then(g => { googleRef.current = g }).catch(() => {})
+  }, [])
+
   function reset() {
     setTitle(''); setItemType('activity'); setStartTime(''); setEndTime('')
     setLocation(''); setLocationLat(null); setLocationLng(null); setSuggestions([])
@@ -131,75 +141,53 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
     setLocationLat(null)
     setLocationLng(null)
     clearTimeout(geoDebounce.current)
-    if (val.trim().length < 3) { setSuggestions([]); setShowSugs(false); return }
-    geoDebounce.current = setTimeout(() => searchLocations(val), 300)
+    if (val.trim().length < 2) { setSuggestions([]); setShowSugs(false); return }
+    geoDebounce.current = setTimeout(() => fetchPredictions(val), 300)
   }
 
-  async function searchLocations(val) {
-    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN
-    const fsqKey      = import.meta.env.VITE_FSQ_KEY
-
-    async function fetchMapbox() {
-      if (!mapboxToken) return []
-      const r = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(val)}.json` +
-        `?access_token=${mapboxToken}&limit=4&types=place,poi,address`
-      )
-      const data = await r.json()
-      return (data.features || []).map(f => ({
-        id:       f.id,
-        name:     f.text,
-        subtitle: f.place_name,
-        lat:      f.center[1],
-        lng:      f.center[0],
-        source:   'mapbox',
-      }))
-    }
-
-    async function fetchFSQ() {
-      if (!fsqKey) return []
-      const r = await fetch(
-        `https://api.foursquare.com/v3/places/search` +
-        `?query=${encodeURIComponent(val)}&limit=4&fields=name,categories,geocodes,location`,
-        { headers: { Authorization: fsqKey, Accept: 'application/json' } }
-      )
-      if (!r.ok) return []
-      const data = await r.json()
-      return (data.results || [])
-        .filter(p => p.geocodes?.main)
-        .map(p => ({
-          id:       p.fsq_id,
-          name:     p.name,
-          subtitle: p.location?.formatted_address || p.location?.locality || p.categories?.[0]?.name || '',
-          lat:      p.geocodes.main.latitude,
-          lng:      p.geocodes.main.longitude,
-          source:   'foursquare',
-        }))
-    }
-
-    const [fsqRes, mapboxRes] = await Promise.allSettled([fetchFSQ(), fetchMapbox()])
-    const fsqResults    = fsqRes.status    === 'fulfilled' ? fsqRes.value    : []
-    const mapboxResults = mapboxRes.status === 'fulfilled' ? mapboxRes.value : []
-
-    // Foursquare results first (venue-precise), Mapbox fills in; dedupe by ~100m grid
-    const seen = new Set()
-    const merged = []
-    for (const r of [...fsqResults, ...mapboxResults]) {
-      const key = `${Math.round(r.lat * 1000)},${Math.round(r.lng * 1000)}`
-      if (!seen.has(key)) { seen.add(key); merged.push(r) }
-    }
-
-    setSuggestions(merged.slice(0, 6))
-    setShowSugs(merged.length > 0)
+  function fetchPredictions(val) {
+    const google = googleRef.current
+    if (!google || !canCallPlaces()) return
+    recordPlacesCall()
+    const svc = new google.maps.places.AutocompleteService()
+    svc.getPlacePredictions(
+      { input: val, types: ['establishment', 'geocode'] },
+      (predictions, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && predictions?.length) {
+          setSuggestions(predictions)
+          setShowSugs(true)
+        } else {
+          setSuggestions([])
+          setShowSugs(false)
+        }
+      }
+    )
   }
 
-  function selectSuggestion(result) {
-    const city = result.subtitle?.split(',')[0] || ''
-    setLocation(city ? `${result.name}, ${city}` : result.name)
-    setLocationLat(result.lat)
-    setLocationLng(result.lng)
+  function selectSuggestion(prediction) {
+    const google = googleRef.current
+    if (!google) return
+
+    // Show the description immediately so the input updates right away
+    setLocation(prediction.description)
     setSuggestions([])
     setShowSugs(false)
+
+    // Fetch precise coordinates via place details
+    if (!placesServiceDiv.current) {
+      placesServiceDiv.current = document.createElement('div')
+    }
+    const svc = new google.maps.places.PlacesService(placesServiceDiv.current)
+    svc.getDetails(
+      { placeId: prediction.place_id, fields: ['name', 'geometry', 'formatted_address'] },
+      (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry) {
+          setLocation(`${place.name}, ${place.formatted_address}`)
+          setLocationLat(place.geometry.location.lat())
+          setLocationLng(place.geometry.location.lng())
+        }
+      }
+    )
   }
 
   function handleClose() {
@@ -360,36 +348,35 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
                   background: '#fff', borderRadius: 10, border: '1.5px solid #C4CDD8',
                   boxShadow: '0 8px 24px rgba(11,15,26,0.12)', overflow: 'hidden',
                 }}>
-                  {suggestions.map((result, i) => (
-                    <button
-                      key={result.id || i}
-                      type="button"
-                      onMouseDown={() => selectSuggestion(result)}
-                      style={{
-                        display: 'block', width: '100%', textAlign: 'left',
-                        padding: '9px 14px', background: 'none', border: 'none',
-                        cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                        borderBottom: i < suggestions.length - 1 ? '1px solid #F4F6F8' : 'none',
-                        transition: 'background 80ms',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#F9F7F4'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  {suggestions.map((pred, i) => {
+                    const main = pred.structured_formatting?.main_text    || pred.description
+                    const sub  = pred.structured_formatting?.secondary_text || ''
+                    return (
+                      <button
+                        key={pred.place_id}
+                        type="button"
+                        onMouseDown={() => selectSuggestion(pred)}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '9px 14px', background: 'none', border: 'none',
+                          cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                          borderBottom: i < suggestions.length - 1 ? '1px solid #F4F6F8' : 'none',
+                          transition: 'background 80ms',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#F9F7F4'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
                         <div style={{ fontSize: 13, fontWeight: 500, color: '#0B0F1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.name}
+                          {main}
                         </div>
-                        <div style={{ fontSize: 10, color: result.source === 'foursquare' ? '#D95F2B' : '#C4CDD8', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
-                          {result.source === 'foursquare' ? 'FSQ' : 'MAP'}
-                        </div>
-                      </div>
-                      {result.subtitle && (
-                        <div style={{ fontSize: 11, color: '#8C97A6', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.subtitle}
-                        </div>
-                      )}
-                    </button>
-                  ))}
+                        {sub && (
+                          <div style={{ fontSize: 11, color: '#8C97A6', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {sub}
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>

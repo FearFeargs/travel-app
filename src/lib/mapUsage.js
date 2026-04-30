@@ -1,9 +1,9 @@
 // Per-device daily caps stored in localStorage.
-// These protect against Mapbox map-load costs and Foursquare free-tier limits.
-// When a subscription model is introduced, move enforcement server-side.
+// Google Maps Platform gives $200/month free credit (~28k map loads, ~70k Places requests).
+// These caps protect against accidental runaway usage before a server-side subscription system exists.
 
-const MAP_LOADS_CAP  = 20   // Mapbox map loads per device per day
-const FSQ_CALLS_CAP  = 25   // Foursquare Places API calls per device per day
+const MAP_LOADS_CAP   = 20   // Google Maps JS loads per device per day
+const PLACES_CALLS_CAP = 50  // Google Places Autocomplete calls per device per day
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -27,7 +27,7 @@ function write(data) {
 }
 
 function getOrInit() {
-  return read() || { mapLoads: 0, fsqCalls: 0 }
+  return read() || { mapLoads: 0, placesCalls: 0 }
 }
 
 export function canLoadMap() {
@@ -39,19 +39,19 @@ export function recordMapLoad() {
   write({ ...d, mapLoads: d.mapLoads + 1 })
 }
 
-export function canCallFSQ() {
-  return getOrInit().fsqCalls < FSQ_CALLS_CAP
+export function canCallPlaces() {
+  return getOrInit().placesCalls < PLACES_CALLS_CAP
 }
 
-export function recordFSQCall() {
+export function recordPlacesCall() {
   const d = getOrInit()
-  write({ ...d, fsqCalls: d.fsqCalls + 1 })
+  write({ ...d, placesCalls: d.placesCalls + 1 })
 }
 
 export function getUsage() {
   const d = getOrInit()
   return {
-    mapLoads:   d.mapLoads,  mapLoadCap:  MAP_LOADS_CAP,
-    fsqCalls:   d.fsqCalls,  fsqCallCap:  FSQ_CALLS_CAP,
+    mapLoads:    d.mapLoads,    mapLoadCap:    MAP_LOADS_CAP,
+    placesCalls: d.placesCalls, placesCallCap: PLACES_CALLS_CAP,
   }
 }
