@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import CommentThread from './CommentThread'
@@ -82,7 +82,11 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
   const [itemType, setItemType]   = useState('activity')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime]     = useState('')
-  const [location, setLocation]   = useState('')
+  const [location, setLocation]       = useState('')
+  const [locationLat, setLocationLat] = useState(null)
+  const [locationLng, setLocationLng] = useState(null)
+  const [suggestions, setSuggestions] = useState([])
+  const [showSugs, setShowSugs]       = useState(false)
   const [notes, setNotes]         = useState('')
   const [cost, setCost]           = useState('')
   const [currency, setCurrency]   = useState('USD')
@@ -91,6 +95,7 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
   const [error, setError]         = useState(null)
   const [loading, setLoading]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const geoDebounce = useRef(null)
 
   useEffect(() => {
     if (item) {
@@ -99,6 +104,9 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
       setStartTime(timeToHHMM(item.start_time))
       setEndTime(timeToHHMM(item.end_time))
       setLocation(item.location_name || '')
+      setLocationLat(item.location_lat ?? null)
+      setLocationLng(item.location_lng ?? null)
+      setSuggestions([])
       setNotes(item.notes || '')
       setCost(item.cost_amount != null ? String(item.cost_amount) : '')
       setCurrency(item.cost_currency || 'USD')
@@ -113,8 +121,38 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
 
   function reset() {
     setTitle(''); setItemType('activity'); setStartTime(''); setEndTime('')
-    setLocation(''); setNotes(''); setCost(''); setCurrency('USD')
+    setLocation(''); setLocationLat(null); setLocationLng(null); setSuggestions([])
+    setNotes(''); setCost(''); setCurrency('USD')
     setUrl(''); setIsProposal(false); setError(null); setConfirmDelete(false); setLoading(false)
+  }
+
+  function handleLocationChange(val) {
+    setLocation(val)
+    setLocationLat(null)
+    setLocationLng(null)
+    clearTimeout(geoDebounce.current)
+    const token = import.meta.env.VITE_MAPBOX_TOKEN
+    if (!token || val.trim().length < 3) { setSuggestions([]); setShowSugs(false); return }
+    geoDebounce.current = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(val)}.json?access_token=${token}&limit=5&types=place,poi,address`
+        )
+        const data = await r.json()
+        setSuggestions(data.features || [])
+        setShowSugs(true)
+      } catch {
+        setSuggestions([])
+      }
+    }, 320)
+  }
+
+  function selectSuggestion(feature) {
+    setLocation(feature.place_name)
+    setLocationLat(feature.center[1])
+    setLocationLng(feature.center[0])
+    setSuggestions([])
+    setShowSugs(false)
   }
 
   function handleClose() {
@@ -141,6 +179,8 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
       start_time:    combineDateTime(startTime),
       end_time:      combineDateTime(endTime),
       location_name: location.trim() || null,
+      location_lat:  locationLat,
+      location_lng:  locationLng,
       notes:         notes.trim() || null,
       cost_amount:   cost ? parseFloat(cost) : null,
       cost_currency: currency,
@@ -249,12 +289,54 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
             </div>
           </div>
 
-          {/* Location */}
+          {/* Location with geocoding */}
           <div>
-            <label style={labelStyle}>Location <span style={{ color: '#A0ADBC', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
-            <input style={inputStyle} placeholder="Terminal 5, Heathrow"
-              value={location} onChange={e => setLocation(e.target.value)}
-              onFocus={focusDusk} onBlur={blurSlate} />
+            <label style={labelStyle}>
+              Location <span style={{ color: '#A0ADBC', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+              {locationLat && locationLng && (
+                <span style={{ marginLeft: 8, fontSize: 11, color: '#2A7D5F', fontWeight: 600, letterSpacing: 0, textTransform: 'none' }}>📍 Located</span>
+              )}
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                style={{ ...inputStyle, borderColor: locationLat && locationLng ? '#2A7D5F' : undefined }}
+                placeholder="Search a place — e.g. Heathrow Terminal 5"
+                value={location}
+                onChange={e => handleLocationChange(e.target.value)}
+                onFocus={e => { focusDusk(e); if (suggestions.length > 0) setShowSugs(true) }}
+                onBlur={e => { blurSlate(e); setTimeout(() => setShowSugs(false), 150) }}
+                autoComplete="off"
+              />
+              {showSugs && suggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 200,
+                  background: '#fff', borderRadius: 10, border: '1.5px solid #C4CDD8',
+                  boxShadow: '0 8px 24px rgba(11,15,26,0.12)', overflow: 'hidden',
+                }}>
+                  {suggestions.map((f, i) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onMouseDown={() => selectSuggestion(f)}
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'left',
+                        padding: '9px 14px', background: 'none', border: 'none',
+                        cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                        borderBottom: i < suggestions.length - 1 ? '1px solid #F4F6F8' : 'none',
+                        transition: 'background 80ms',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#F9F7F4'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#0B0F1A' }}>{f.text}</div>
+                      <div style={{ fontSize: 11, color: '#8C97A6', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {f.place_name}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Cost */}

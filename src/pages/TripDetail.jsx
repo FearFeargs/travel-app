@@ -10,6 +10,7 @@ import CommentPanel from '@/components/CommentPanel'
 import DeleteTripModal from '@/components/DeleteTripModal'
 import { uploadImage } from '@/lib/uploadImage'
 import { useImageBrightness } from '@/hooks/useImageBrightness'
+import TripMap from '@/components/TripMap'
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -548,16 +549,18 @@ export default function TripDetail() {
 
           {/* View toggle */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
-            {['itinerary', 'expenses'].map(v => (
-              <button key={v} onClick={() => setActiveView(v)} style={{
+            {[
+              { key: 'itinerary', label: 'Itinerary' },
+              { key: 'expenses',  label: expenses.length > 0 ? `Expenses (${expenses.length})` : 'Expenses' },
+              { key: 'map',       label: 'Map' },
+            ].map(({ key, label }) => (
+              <button key={key} onClick={() => setActiveView(key)} style={{
                 padding: '9px 20px', borderRadius: 9999, fontSize: 13, fontWeight: 600,
-                background: activeView === v ? '#1C2E4A' : '#fff',
-                color: activeView === v ? '#fff' : '#677585',
-                border: `1.5px solid ${activeView === v ? '#1C2E4A' : '#C4CDD8'}`,
+                background: activeView === key ? '#1C2E4A' : '#fff',
+                color: activeView === key ? '#fff' : '#677585',
+                border: `1.5px solid ${activeView === key ? '#1C2E4A' : '#C4CDD8'}`,
                 cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: 'all 150ms',
-              }}>
-                {v === 'itinerary' ? 'Itinerary' : `Expenses${expenses.length > 0 ? ` (${expenses.length})` : ''}`}
-              </button>
+              }}>{label}</button>
             ))}
           </div>
 
@@ -721,6 +724,16 @@ export default function TripDetail() {
                 </div>
               </>
             )
+          )}
+
+          {/* ── Map view ── */}
+          {activeView === 'map' && (
+            <div className="fade-in">
+              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 600, color: '#8C97A6', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>
+                {items.filter(i => i.location_lat != null && !i.is_proposal).length} located item{items.filter(i => i.location_lat != null && !i.is_proposal).length !== 1 ? 's' : ''} · all days
+              </div>
+              <TripMap items={items} />
+            </div>
           )}
 
           {/* ── Expenses view ── */}
