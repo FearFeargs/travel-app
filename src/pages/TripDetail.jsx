@@ -403,13 +403,34 @@ export default function TripDetail() {
     e.preventDefault()
     if (!inviteEmail.trim()) return
     setInviteSending(true); setInviteError(null)
+
+    const token     = crypto.randomUUID()
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
     const { error } = await supabase.from('invites').insert({
       trip_id:            id,
       email:              inviteEmail.trim().toLowerCase(),
       invited_by_user_id: user.id,
       role:               inviteRole,
+      token,
+      expires_at:         expiresAt,
     })
     if (error) { setInviteError(error.message); setInviteSending(false); return }
+
+    const { error: fnError } = await supabase.functions.invoke('send-invite', {
+      body: {
+        email:       inviteEmail.trim().toLowerCase(),
+        inviterName: displayName || 'A traveler',
+        tripTitle:   trip.title,
+        token,
+        appUrl:      window.location.origin,
+      },
+    })
+
+    if (fnError) {
+      setInviteError('Invite saved — but the email failed to send. Share the link manually.')
+    }
+
     setInviteEmail('')
     await loadInvites()
     setInviteSending(false)
