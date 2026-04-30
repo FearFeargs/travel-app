@@ -131,26 +131,28 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
     setLocationLat(null)
     setLocationLng(null)
     clearTimeout(geoDebounce.current)
-    const token = import.meta.env.VITE_MAPBOX_TOKEN
-    if (!token || val.trim().length < 3) { setSuggestions([]); setShowSugs(false); return }
+    const fsqKey = import.meta.env.VITE_FSQ_KEY
+    if (!fsqKey || val.trim().length < 3) { setSuggestions([]); setShowSugs(false); return }
     geoDebounce.current = setTimeout(async () => {
       try {
         const r = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(val)}.json?access_token=${token}&limit=5&types=place,poi,address`
+          `https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(val)}&limit=6&fields=name,categories,geocodes,location`,
+          { headers: { Authorization: fsqKey, Accept: 'application/json' } }
         )
         const data = await r.json()
-        setSuggestions(data.features || [])
+        setSuggestions(data.results || [])
         setShowSugs(true)
       } catch {
         setSuggestions([])
       }
-    }, 320)
+    }, 280)
   }
 
-  function selectSuggestion(feature) {
-    setLocation(feature.place_name)
-    setLocationLat(feature.center[1])
-    setLocationLng(feature.center[0])
+  function selectSuggestion(place) {
+    const addr = place.location?.formatted_address || place.location?.locality || ''
+    setLocation(addr ? `${place.name}, ${addr}` : place.name)
+    setLocationLat(place.geocodes?.main?.latitude  ?? null)
+    setLocationLng(place.geocodes?.main?.longitude ?? null)
     setSuggestions([])
     setShowSugs(false)
   }
@@ -313,27 +315,32 @@ export default function AddItemModal({ open, onClose, day, tripId, userId, onAdd
                   background: '#fff', borderRadius: 10, border: '1.5px solid #C4CDD8',
                   boxShadow: '0 8px 24px rgba(11,15,26,0.12)', overflow: 'hidden',
                 }}>
-                  {suggestions.map((f, i) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onMouseDown={() => selectSuggestion(f)}
-                      style={{
-                        display: 'block', width: '100%', textAlign: 'left',
-                        padding: '9px 14px', background: 'none', border: 'none',
-                        cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-                        borderBottom: i < suggestions.length - 1 ? '1px solid #F4F6F8' : 'none',
-                        transition: 'background 80ms',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#F9F7F4'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                    >
-                      <div style={{ fontSize: 13, fontWeight: 500, color: '#0B0F1A' }}>{f.text}</div>
-                      <div style={{ fontSize: 11, color: '#8C97A6', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {f.place_name}
-                      </div>
-                    </button>
-                  ))}
+                  {suggestions.map((place, i) => {
+                    const sub = place.location?.formatted_address || place.location?.locality || place.categories?.[0]?.name || ''
+                    return (
+                      <button
+                        key={place.fsq_id || i}
+                        type="button"
+                        onMouseDown={() => selectSuggestion(place)}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '9px 14px', background: 'none', border: 'none',
+                          cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                          borderBottom: i < suggestions.length - 1 ? '1px solid #F4F6F8' : 'none',
+                          transition: 'background 80ms',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#F9F7F4'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <div style={{ fontSize: 13, fontWeight: 500, color: '#0B0F1A' }}>{place.name}</div>
+                        {sub && (
+                          <div style={{ fontSize: 11, color: '#8C97A6', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {sub}
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
